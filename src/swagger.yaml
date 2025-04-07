@@ -22,7 +22,6 @@ security:
 
 paths:
 
-  # Health Check
   /account/health:
     get:
       tags:
@@ -32,7 +31,6 @@ paths:
         '200':
           description: Returns a greeting message
 
-  # Account Controller
   /account/login:
     post:
       tags:
@@ -140,7 +138,6 @@ paths:
                     nullable: true
                     example: null
 
-  # Chat Controller
   /chat/send:
     post:
       tags:
@@ -193,7 +190,102 @@ paths:
               schema:
                 type: boolean
 
-  # User Controller
+  /chat/create:
+    post:
+      tags:
+        - Chat
+      summary: Create or start a new chat/contact
+      security:
+        - BearerAuth: []
+        - ClientIdHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - currentUserId
+              properties:
+                userId:
+                  type: number
+                  example: 2
+                currentUserId:
+                  type: number
+                  example: 1
+      responses:
+        '200':
+          description: Chat contact created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Chat contact created"
+                  data:
+                    $ref: '#/components/schemas/ChatContactDto'
+        '400':
+          description: Invalid input or chat creation failed
+        '500':
+          description: Internal server error
+
+  /chat/action:
+    post:
+      tags:
+        - Chat
+      summary: Perform a chat action (block, mute, archive)
+      operationId: chatAction
+      security:
+        - ClientIdHeader: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - currentUserId
+                - action
+              properties:
+                userId:
+                  type: string
+                  example: "123"
+                currentUserId:
+                  type: string
+                  example: "456"
+                action:
+                  type: string
+                  enum: [BLOCK, MUTE, ARCHIVE]
+                  example: BLOCK
+      responses:
+        '200':
+          description: Chat action performed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  status:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: BLOCK successful
+        '400':
+          description: Invalid input or action already performed
+        '500':
+          description: Internal server error
 
   /user:
     get:
@@ -217,17 +309,6 @@ paths:
                     example: true
         '400':
           description: Failed to retrieve users
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Try again!"
-                  error:
-                    type: object
-                    nullable: true
 
   /user/{id}:
     get:
@@ -273,17 +354,6 @@ paths:
                 $ref: '#/components/schemas/UserBasicDto'
         '400':
           description: Invalid request or user not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Try again!"
-                  error:
-                    type: object
-                    nullable: true
 
 components:
   schemas:
@@ -327,6 +397,50 @@ components:
           type: string
         lastName:
           type: string
+
+    ChatContactDto:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        userId:
+          type: number
+          example: 2
+        currentUserId:
+          type: number
+          example: 1
+        isMuted:
+          type: boolean
+          example: false
+        isArchived:
+          type: boolean
+          example: false
+        isBlocked:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-01T10:00:00.000Z"
+        createdBy:
+          type: string
+          example: "system"
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        updatedBy:
+          type: string
+          nullable: true
+          example: null
+        isActive:
+          type: boolean
+          example: true
+        isDeleted:
+          type: boolean
+          example: false
 
   securitySchemes:
     BearerAuth:

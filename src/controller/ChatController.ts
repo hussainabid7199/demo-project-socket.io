@@ -10,8 +10,9 @@ import {
 } from "inversify-express-utils";
 import { TYPES } from "../config/types";
 import IChatService from "../services/interface/IChatService";
-import { MessageDto } from "../dtos/ChatDto";
+import ChatDto from "../dtos/ChatDto";
 import { authentication } from "../middleware/authentication.middleware";
+import sequelize from "../database/connection";
 
 @controller("/chat")
 export class ChatController implements interfaces.Controller {
@@ -21,42 +22,80 @@ export class ChatController implements interfaces.Controller {
     this._chatService = chatService;
   }
 
-  @httpPost("/send", authentication)
-  public async send(
+  @httpPost("/create", authentication)
+  public async createChat(
     @request() req: Request,
     @response() res: Response
-  ): Promise<Response<MessageDto>> {
+  ): Promise<Response<ChatDto | void>> {
+    const t = await sequelize.transaction();
     try {
-      const { userId, socketId, message } = req.body;
+      const { userId, currentUserId } = req.body;
 
-      if (!userId || !socketId || !message) {
+      if (!userId || !currentUserId) {
         return res
           .status(400)
           .json({ success: false, message: "Invalid request payload" });
       }
 
-      const response = await this._chatService.sendToSocket(
+      const response = await this._chatService.createChat(
         userId,
-        socketId,
-        message
+        currentUserId
       );
-      return res.status(response.success ? 201 : 500).json(response);
+
+      if (response && response.data && response.success) {
+        await t.commit();
+        return res.status(200).json(response);
+      } else {
+        await t.rollback();
+        return res.status(400).json(response);
+      }
     } catch (error) {
-      console.error("Error sending message:", error);
+      await t.rollback();
+      console.error("Error while creating chat:", error);
       return res.status(500).json({
         success: false,
-        message: "Internal Server Error",
+        message: "Internal server error",
+        error: "Internal server error"
       });
     }
   }
 
-  @httpPost("/broadcast", authentication)
-  public async broadcast(
+  @httpPost("/action", authentication)
+  public async chatAction(
     @request() req: Request,
     @response() res: Response
-  ): Promise<boolean | void> {
-    const { message } = req.body;
-    const response = this._chatService.broadcastMessage(message);
-    res.status(201).json(response);
+  ): Promise<Response<ChatDto | void>> {
+    const t = await sequelize.transaction();
+    try {
+      const { userId, currentUserId, action } = req.body;
+
+      if (!userId || !currentUserId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid request payload" });
+      }
+
+      const response = await this._chatService.chatAction(
+        userId,
+        currentUserId,
+        action
+      );
+
+      if (response && response.data && response.success) {
+        await t.commit();
+        return res.status(200).json(response);
+      } else {
+        await t.rollback();
+        return res.status(400).json(response);
+      }
+    } catch (error) {
+      await t.rollback();
+      console.error("Error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+        error: "Internal server error"
+      });
+    }
   }
 }
