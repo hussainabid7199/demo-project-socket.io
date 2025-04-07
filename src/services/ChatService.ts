@@ -3,12 +3,13 @@ import { TYPES } from "../config/types";
 import IChatService from "./interface/IChatService";
 import { Server as SocketIOServer } from "socket.io";
 import Response from "../dtos/Response";
-import { ChatContactDto } from "../dtos/ChatDto";
+import ChatUserListDto, { ChatContactDto } from "../dtos/ChatDto";
 import IUserService from "./interface/IUserService";
 import ChatContactModel from "../database/models/ChatContactModel";
 import { ChatContactDataModel } from "../models/ChatDataModel";
 import { UserBasicDto } from "../dtos/UserDto";
 import { ChatAction } from "../enums/chat.action.enum";
+import UserModel from "../database/models/UserModel";
 
 @injectable()
 export default class ChatService implements IChatService {
@@ -22,12 +23,49 @@ export default class ChatService implements IChatService {
     this._userService = userService;
   }
 
-  getChatContact(
-    id: number,
-    guid: string
-  ): Promise<Response<ChatContactDto[]>> {
-    console.log(id, guid);
-    throw new Error("Method not implemented.");
+  async getChatContact(
+    id: number
+  ): Promise<Response<ChatUserListDto[]>> {
+    console.log(id);
+    const result = await ChatContactModel.findAll({
+      where: {
+        currentUserId: id,
+        isActive: true,
+        isDeleted: false,
+      },
+      include: [
+        {
+          model: UserModel,
+          as: "user",
+          attributes: ["id", "guid", "firstName", "lastName"],
+        },
+      ],
+    });
+
+    const response: ChatUserListDto[] = result.map((x) => {
+      const user: ChatUserListDto = x.dataValues;
+      return {
+        id: user.id,
+        guid: user.guid,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      };
+    })
+
+    if (response) {
+      return {
+        success: true,
+        status: 200,
+        message: "Chat created successfully!",
+        data: response,
+      };
+    } else {
+      return {
+        success: false,
+        status: 400,
+        message: "Failed to create chat.",
+      };
+    }
   }
 
   async createChat(
@@ -186,16 +224,15 @@ export default class ChatService implements IChatService {
     const response = await ChatContactModel.update(updatePayload, {
       where: {
         id: isChatAvailable.id,
-      }
+      },
     });
-
 
     if (response) {
       return {
         success: true,
         status: 200,
         message: "Chat created successfully!",
-        data: isChatAvailable
+        data: isChatAvailable,
       };
     } else {
       return {

@@ -1,10 +1,8 @@
-export default interface ChatDto {
+export default interface ChatUserListDto {
   id: number;
-  userId: number;
-  currentUserId: number;
-  senderId?: string;
-  receiverId?: string;
-  message: string;
+  guid: string;
+  firstName: string;
+  lastName: string;
 }
 
 export interface MessageDto {
