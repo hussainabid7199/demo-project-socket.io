@@ -3,5 +3,6 @@ export default interface Response<T> {
   errors?: string[];
   message?: string;
   errorCode?: string;
+  status?: number;
   data?: T;
 }

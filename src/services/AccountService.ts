@@ -1,19 +1,16 @@
 import { injectable } from "inversify";
 import IAccountService from "./interface/IAccountService";
-import  UserDto  from "../dtos/UserDto";
+import UserDto from "../dtos/UserDto";
 import LoginDataModel from "../models/LoginDataModel";
-import  UserModel from "../database/models/UserModel";
+import UserModel from "../database/models/UserModel";
 import sequelize from "../database/connection";
 import Response from "../dtos/Response";
-import LoginBasicDto, { LoginDto } from "../dtos/LoginDto";
 import BcryptUtils from "../utils/bcrypt.utils";
 import generateToken from "../jwt/jwt-token";
 
 @injectable()
 export default class AccountService implements IAccountService {
-  async login(
-    model: LoginDataModel
-  ): Promise<Response<LoginDto>> {
+  async login(model: LoginDataModel): Promise<Response<UserDto>> {
     const t = await sequelize.transaction();
     try {
       if (!model.username && !model.password) {
@@ -26,11 +23,21 @@ export default class AccountService implements IAccountService {
           isActive: true,
           isDeleted: false,
         },
-        attributes: ["id", "guid", "email", "password", "isActive", "isDeleted"],
+        attributes: [
+          "id",
+          "guid",
+          "email",
+          "firstName",
+          "lastName",
+          "profilePicture",
+          "password",
+          "isActive",
+          "isDeleted",
+        ],
         raw: false,
       });
 
-      const userResponse: LoginBasicDto = result?.dataValues;
+      const userResponse = result?.dataValues;
       if (!userResponse) {
         throw new Error("Invalid username or password");
       }
@@ -46,18 +53,29 @@ export default class AccountService implements IAccountService {
 
       const token = await generateToken(userResponse.email, userResponse.guid);
 
-      if(!token){
+      if (!token) {
         throw new Error("Some error occurred");
       }
 
-      const response = await {
+      const usersData: UserDto = userResponse;
+
+      const response: UserDto = {
+        id: usersData.id,
+        guid: usersData.guid,
+        firstName: usersData.firstName,
+        lastName: usersData.lastName,
+        email: usersData.email,
+        profilePicture: usersData.profilePicture,
+        isActive: usersData.isActive,
+        isDeleted: usersData.isDeleted,
         token: token,
-        isLogin: true
       };
 
       if (response) {
         return {
           success: true,
+          status: 200,
+          message: "Login successful!",
           data: response,
         };
       } else {
@@ -66,17 +84,11 @@ export default class AccountService implements IAccountService {
           message: "Login failed",
         };
       }
-
-    } catch(e) {
+    } catch (e) {
       console.log(e);
       await t.rollback();
       throw new Error("Some error occurred!");
     }
-
-    return {
-      success: false,
-      message: "Unexpected error: operation did not complete",
-    };
   }
 
   register(model: UserModel): Promise<UserDto> {

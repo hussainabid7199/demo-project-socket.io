@@ -42,19 +42,33 @@ export class AccountController implements interfaces.Controller {
   public async login(
     @request() req: Request,
     @response() res: Response
-  ): Promise<void> {
+  ): Promise<UserDto | void> {
     const model: LoginModel = req.body;
+    const t = await sequelize.transaction();
     try {
       const response = await this._accountService.login(model);
+      const client_ip = req.clientIp;
 
-      if (response && response.data) {
-        res.status(200).send({
-          success: true,
-          message: "Login successful!",
-          data: response.data,
+      if (response && response.success && response.data) {
+        const user = await UserModel.findOne({
+          where: { guid: response.data.guid },
         });
+
+        if (user && user.dataValues && client_ip) {
+          const loginOn = user?.dataValues.login_on;
+          (
+            await user.update({
+              ip_address: client_ip,  
+              login_on: new Date(),
+              lastLoginOn: loginOn,
+            })
+          ).save();
+        }
+        await t.commit();
+        res.status(200).send(response);
       }
     } catch (error) {
+      await t.rollback();
       res.status(400).send({
         message: "Try again!",
         error: error,
@@ -70,7 +84,9 @@ export class AccountController implements interfaces.Controller {
     const t = await sequelize.transaction();
     try {
       const model = req.body as UserDataModel;
-      const existingUser = await UserModel.findOne({ where: { email: model.email } });
+      const existingUser = await UserModel.findOne({
+        where: { email: model.email },
+      });
 
       if (existingUser) {
         res.status(400).json({

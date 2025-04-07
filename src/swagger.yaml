@@ -22,8 +22,7 @@ security:
 
 paths:
 
-  # Account Controller
-
+  # Health Check
   /account/health:
     get:
       tags:
@@ -33,6 +32,7 @@ paths:
         '200':
           description: Returns a greeting message
 
+  # Account Controller
   /account/login:
     post:
       tags:
@@ -104,8 +104,8 @@ paths:
                   type: string
                   example: "password123"
                 profilePicture:
-                  type: file
-                  example: "password123"
+                  type: string
+                  format: binary
       responses:
         '201':
           description: Registration successful
@@ -123,7 +123,7 @@ paths:
                   data:
                     $ref: '#/components/schemas/UserDto'
         '400':
-          description: Registration failed (email exists, password mismatch, or other error)
+          description: Registration failed
           content:
             application/json:
               schema:
@@ -141,7 +141,6 @@ paths:
                     example: null
 
   # Chat Controller
-
   /chat/send:
     post:
       tags:
@@ -203,15 +202,32 @@ paths:
       summary: Get all users
       responses:
         '200':
-          description: List of users
+          description: List of users retrieved successfully
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/UserDto'
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserBasicDto'
+                  status:
+                    type: boolean
+                    example: true
         '400':
           description: Failed to retrieve users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Try again!"
+                  error:
+                    type: object
+                    nullable: true
 
   /user/{id}:
     get:
@@ -232,33 +248,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserDto'
 
-  /user/{id}:
-    put:
+  /user/{id}/{guid}:
+    get:
       tags:
         - User
-      summary: Update a user category
+      summary: Get a user by ID and Guid
       parameters:
         - name: id
           in: path
           required: true
           schema:
+            type: integer
+        - name: guid
+          in: path
+          required: true
+          schema:
             type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                description:
-                  type: string
       responses:
         '200':
-          description: Category updated successfully
+          description: User data fetched by ID and GUID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBasicDto'
         '400':
-          description: Update failed
+          description: Invalid request or user not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Try again!"
+                  error:
+                    type: object
+                    nullable: true
 
 components:
   schemas:
@@ -276,7 +301,32 @@ components:
         confirmPassword:
           type: string
         profilePicture:
-          type: file
+          type: string
+          format: binary
+
+    UserDto:
+      type: object
+      properties:
+        id:
+          type: number
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        profilePicture:
+          type: string
+
+    UserBasicDto:
+      type: object
+      properties:
+        id:
+          type: number
+        firstName:
+          type: string
+        lastName:
+          type: string
 
   securitySchemes:
     BearerAuth:
