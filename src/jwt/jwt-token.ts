@@ -4,7 +4,7 @@ import config from "./jwt-config";
 const generateToken = async (
   email: string,
   guid: string,
-  expireIn: number = 3600
+  expireIn: number = 15552000
 ): Promise<string> => {
   const jwtSecret = config.jwt.secret;
   if (!jwtSecret) {

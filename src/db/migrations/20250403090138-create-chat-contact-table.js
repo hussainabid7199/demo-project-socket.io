@@ -40,7 +40,7 @@ module.exports = {
           allowNull: false,
           defaultValue: false,
         },
-        createdOn: {
+        createdAt: {
           type: Sequelize.DataTypes.DATE(7),
           defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
           allowNull: false,
@@ -49,7 +49,7 @@ module.exports = {
           type: Sequelize.STRING(255),
           allowNull: false
         },
-        updatedOn: {
+        updatedAt: {
           type: Sequelize.DataTypes.DATE(7),
           allowNull: true,
         },
