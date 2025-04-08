@@ -1,10 +1,6 @@
 import cluster from "node:cluster";
 import { cpus } from "node:os";
 
-/**
- * Start a cluster of worker processes to share the server load.
- * @param callback - The server-starting function to run in each worker.
- */
 export function startCluster(callback: () => void): void {
   const numCPUs = cpus().length;
   if (cluster.isPrimary) {

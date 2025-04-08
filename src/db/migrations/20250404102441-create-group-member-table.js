@@ -20,12 +20,12 @@ module.exports = {
             key: 'id',
           },
         },
-        userId: {
-          type: Sequelize.INTEGER,
+        memberId: {
+          type: Sequelize.UUID,
           allowNull: false,
           references: {
             model: 'users',
-            key: 'id',
+            key: 'guid',
           },
           unique: true
         },

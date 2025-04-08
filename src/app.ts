@@ -11,7 +11,6 @@ import limiter from "./helpers/limiter";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";
 import { Server as SocketIOServer } from "socket.io";
-import { startCluster } from "./utils/load-balancer/cluster";
 import ClientIdMiddleware from "./middleware/clientid.middleware";
 import { InversifyExpressServer } from "inversify-express-utils";
 import { createContainer } from "./config/ioc";
@@ -28,6 +27,7 @@ const swaggerDocument = YAML.load(swaggerPath);
 const publicPath = path.join(__dirname, "../public");
 
 import "./controller/controllers";
+import { startCluster } from "./utils/load-balancer/cluster";
 
 export async function startServer() {
   const sIO = {} as SocketIOServer;
@@ -122,4 +122,5 @@ export async function startServer() {
   });
 }
 
+// startServer()
 startCluster(startServer);
