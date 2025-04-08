@@ -23,11 +23,11 @@ export default class ChatService implements IChatService {
     this._userService = userService;
   }
 
+  // Max response time 25ms Min response time 19ms
   async getChatContact(
     id: number
   ): Promise<Response<ChatUserListDto[]>> {
-    console.log(id);
-    const result = await ChatContactModel.findAll({
+    const result = (await ChatContactModel.findAll({
       where: {
         currentUserId: id,
         isActive: true,
@@ -38,32 +38,29 @@ export default class ChatService implements IChatService {
           model: UserModel,
           as: "user",
           attributes: ["id", "guid", "firstName", "lastName"],
-        },
+        }, 
       ],
-    });
+    }));
 
-    const response: ChatUserListDto[] = result.map((x) => {
-      const user: ChatUserListDto = x.dataValues;
-      return {
-        id: user.id,
-        guid: user.guid,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      };
-    })
+    const response: ChatUserListDto[] = result.map(({ dataValues: { user } }) => ({
+      id: user.id,
+      guid: user.guid,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    }));
 
     if (response) {
       return {
         success: true,
         status: 200,
-        message: "Chat created successfully!",
+        message: "Chat contact listed successfully.",
         data: response,
       };
     } else {
       return {
         success: false,
         status: 400,
-        message: "Failed to create chat.",
+        message: "Failed to fetch chat contact list.",
       };
     }
   }

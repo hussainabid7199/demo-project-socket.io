@@ -262,7 +262,7 @@ paths:
         '500':
           description: Internal server error
 
-  /chat/contact:
+  /chat/contact/{id}/{guid}:
     get:
       tags:
         - Chat
@@ -271,21 +271,22 @@ paths:
       security:
         - BearerAuth: []
         - ClientIdHeader: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - id
-              properties:
-                id:
-                  type: number
-                  example: 1
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the user
+        - name: guid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GUID of the user
       responses:
         '200':
-          description: Chat contacts retrieved successfully
+          description: Chat contact listed successfully.
           content:
             application/json:
               schema:
@@ -295,9 +296,9 @@ paths:
                     type: boolean
                     example: true
                   data:
-                    $ref: '#/components/schemas/ChatContactDto'
+                    $ref: '#/components/schemas/ChatUserListDto'
         '400':
-          description: Invalid request payload or user not found
+          description: Failed to fetch chat contact list.
           content:
             application/json:
               schema:
@@ -308,7 +309,7 @@ paths:
                     example: false
                   message:
                     type: string
-                    example: "User does not exist"
+                    example: "Failed to fetch chat contact list."
         '500':
           description: Internal server error
           content:
@@ -325,6 +326,7 @@ paths:
                   error:
                     type: string
                     example: "Internal server error"
+
 
   /user:
     get:
@@ -476,6 +478,18 @@ components:
           type: boolean
         isDeleted:
           type: boolean
+
+    ChatUserListDto:
+      type: object
+      properties:
+        id:
+          type: number
+        guid:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
 
   securitySchemes:
     BearerAuth:

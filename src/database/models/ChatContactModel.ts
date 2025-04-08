@@ -1,6 +1,7 @@
 "use strict";
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../connection";
+import UserModel from "./UserModel";
 
 class ChatContactModel extends Model {}
 
@@ -70,5 +71,10 @@ ChatContactModel.init(
     timestamps: false,
   }
 );
+
+ChatContactModel.belongsTo(UserModel, {
+  foreignKey: 'userId',
+  as: 'user'
+});
 
 export default ChatContactModel;

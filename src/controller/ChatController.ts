@@ -15,6 +15,7 @@ import ChatDto from "../dtos/ChatDto";
 import { authentication } from "../middleware/authentication.middleware";
 import sequelize from "../database/connection";
 import IUserService from "../services/interface/IUserService";
+import ChatUserListDto from "../dtos/ChatDto";
 
 @controller("/chat")
 export class ChatController implements interfaces.Controller {
@@ -28,24 +29,22 @@ export class ChatController implements interfaces.Controller {
     this._chatService = chatService;
     this._userService = userService;
   }
-  
 
-  @httpGet("/contact/:id", authentication)
+  @httpGet("/contact/:id/:guid", authentication)
   public async contact(
     @request() req: Request,
     @response() res: Response
-  ): Promise<Response<ChatDto | void>> {
-    const t = await sequelize.transaction();
+  ): Promise<Response<ChatUserListDto | void>> {
     try {
-      const { id } = req.body;
+      const { id, guid } = req.params;
 
-      if (!id) {
+      if (!+id || !guid) {
         return res
           .status(400)
           .json({ success: false, message: "Invalid request payload" });
       }
 
-      const userExist = await this._userService.getById(id);
+      const userExist = await this._userService.getByGuid(+id, guid);
 
       if (!userExist) {
         return res
@@ -58,14 +57,11 @@ export class ChatController implements interfaces.Controller {
       );
 
       if (response && response.data && response.success) {
-        await t.commit();
         return res.status(200).json(response);
       } else {
-        await t.rollback();
         return res.status(400).json(response);
       }
     } catch (error) {
-      await t.rollback();
       console.error("Error while fetching contact:", error);
       return res.status(500).json({
         success: false,

@@ -84,4 +84,6 @@ UserModel.init(
   }
 );
 
+
+
 export default UserModel
