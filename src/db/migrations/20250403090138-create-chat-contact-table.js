@@ -18,8 +18,7 @@ module.exports = {
           references: {
             model: 'users',
             key: 'id',
-          },
-          unique: true
+          }
         },
         currentUserId: {
           type: Sequelize.INTEGER,

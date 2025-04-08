@@ -15,6 +15,7 @@ const dbConnectionConfiguration = {
       port: Number(process.env.DB_PORT),
       dialectOptions: {
         options: {
+          instanceName: 'SQLEXPRESS',
           encrypt: false,
           trustServerCertificate: true,
         },

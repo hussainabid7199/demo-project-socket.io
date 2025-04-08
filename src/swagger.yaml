@@ -2,9 +2,11 @@ openapi: 3.0.0
 info:
   title: GMR_SOCKET.IO_API DOCS
   version: 1.0.0
+  description: Full API documentation for GMR Socket.IO backend services.
 
 servers:
   - url: http://localhost:3001
+    description: Local development server
 
 tags:
   - name: Health
@@ -76,34 +78,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - firstName
-                - lastName
-                - email
-                - password
-                - confirmPassword
-                - profilePicture
-              properties:
-                firstName:
-                  type: string
-                  example: "John"
-                lastName:
-                  type: string
-                  example: "Doe"
-                email:
-                  type: string
-                  format: email
-                  example: "user@example.com"
-                password:
-                  type: string
-                  example: "password123"
-                confirmPassword:
-                  type: string
-                  example: "password123"
-                profilePicture:
-                  type: string
-                  format: binary
+              $ref: '#/components/schemas/UserSchema'
       responses:
         '201':
           description: Registration successful
@@ -242,8 +217,8 @@ paths:
       summary: Perform a chat action (block, mute, archive)
       operationId: chatAction
       security:
-        - ClientIdHeader: []
         - BearerAuth: []
+        - ClientIdHeader: []
       requestBody:
         required: true
         content:
@@ -281,11 +256,75 @@ paths:
                     example: 200
                   message:
                     type: string
-                    example: BLOCK successful
+                    example: "BLOCK successful"
         '400':
           description: Invalid input or action already performed
         '500':
           description: Internal server error
+
+  /chat/contact:
+    get:
+      tags:
+        - Chat
+      summary: Get chat contacts for a user
+      operationId: getChatContact
+      security:
+        - BearerAuth: []
+        - ClientIdHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: number
+                  example: 1
+      responses:
+        '200':
+          description: Chat contacts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ChatContactDto'
+        '400':
+          description: Invalid request payload or user not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "User does not exist"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Internal server error"
+                  error:
+                    type: string
+                    example: "Internal server error"
 
   /user:
     get:
@@ -359,6 +398,13 @@ components:
   schemas:
     UserSchema:
       type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+        - confirmPassword
+        - profilePicture
       properties:
         firstName:
           type: string
@@ -366,6 +412,7 @@ components:
           type: string
         email:
           type: string
+          format: email
         password:
           type: string
         confirmPassword:
@@ -403,44 +450,32 @@ components:
       properties:
         id:
           type: number
-          example: 1
         userId:
           type: number
-          example: 2
         currentUserId:
           type: number
-          example: 1
         isMuted:
           type: boolean
-          example: false
         isArchived:
           type: boolean
-          example: false
         isBlocked:
           type: boolean
-          example: false
         createdAt:
           type: string
           format: date-time
-          example: "2024-01-01T10:00:00.000Z"
         createdBy:
           type: string
-          example: "system"
         updatedAt:
           type: string
           format: date-time
           nullable: true
-          example: null
         updatedBy:
           type: string
           nullable: true
-          example: null
         isActive:
           type: boolean
-          example: true
         isDeleted:
           type: boolean
-          example: false
 
   securitySchemes:
     BearerAuth:
