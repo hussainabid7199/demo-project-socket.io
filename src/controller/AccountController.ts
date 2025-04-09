@@ -69,9 +69,10 @@ export class AccountController implements interfaces.Controller {
       }
     } catch (error) {
       await t.rollback();
+      console.log(error);
       res.status(400).send({
-        message: "Try again!",
-        error: error,
+        message: "Invalid username or password",
+        error: "Invalid username or password",
       });
     }
   }

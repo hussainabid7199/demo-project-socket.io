@@ -1,6 +1,6 @@
 import { injectable } from "inversify";
 import IAccountService from "./interface/IAccountService";
-import UserDto from "../dtos/UserDto";
+import UserDto, { CurrentUserDto } from "../dtos/UserDto";
 import LoginDataModel from "../models/LoginDataModel";
 import UserModel from "../database/models/UserModel";
 import Response from "../dtos/Response";
@@ -49,7 +49,15 @@ export default class AccountService implements IAccountService {
         throw new Error("Invalid username or password");
       }
 
-      const token = await generateToken(userResponse.email, userResponse.guid);
+      const fullName = `${userResponse.firstName} ${userResponse.lastName}`;
+      const currentUser: CurrentUserDto = {
+        id: userResponse.id,
+        guid: userResponse.guid,
+        email: userResponse.email,
+        fullName: fullName
+      }
+
+      const token = await generateToken(currentUser);
 
       if (!token) {
         throw new Error("Some error occurred");

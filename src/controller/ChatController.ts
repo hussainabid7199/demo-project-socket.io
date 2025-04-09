@@ -19,15 +19,15 @@ import ChatUserListDto from "../dtos/ChatDto";
 
 @controller("/chat")
 export class ChatController implements interfaces.Controller {
-  private readonly _chatService: IChatService;
-  private readonly _userService: IUserService;
+  private readonly chatService: IChatService;
+  private readonly userService: IUserService;
 
   constructor(
     @inject(TYPES.IChatService) chatService: IChatService,
     @inject(TYPES.IUserService) userService: IUserService
   ) {
-    this._chatService = chatService;
-    this._userService = userService;
+    this.chatService = chatService;
+    this.userService = userService;
   }
 
   @httpGet("/contact/:id/:guid", authentication)
@@ -44,7 +44,7 @@ export class ChatController implements interfaces.Controller {
           .json({ success: false, message: "Invalid request payload" });
       }
 
-      const userExist = await this._userService.getByGuid(+id, guid);
+      const userExist = await this.userService.getByGuid(+id, guid);
 
       if (!userExist) {
         return res
@@ -52,9 +52,7 @@ export class ChatController implements interfaces.Controller {
           .json({ success: false, message: "User does not exist" });
       }
 
-      const response = await this._chatService.getChatContact(
-        userExist.data?.id || 0
-      );
+      const response = await this.chatService.getChatContact();
 
       if (response && response.data && response.success) {
         return res.status(200).json(response);
@@ -86,7 +84,7 @@ export class ChatController implements interfaces.Controller {
           .json({ success: false, message: "Invalid request payload" });
       }
 
-      const response = await this._chatService.createChat(
+      const response = await this.chatService.createChat(
         userId,
         currentUserId
       );
@@ -124,7 +122,7 @@ export class ChatController implements interfaces.Controller {
           .json({ success: false, message: "Invalid request payload" });
       }
 
-      const response = await this._chatService.chatAction(
+      const response = await this.chatService.chatAction(
         userId,
         currentUserId,
         action

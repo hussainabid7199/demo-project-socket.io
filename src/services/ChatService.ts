@@ -7,29 +7,34 @@ import ChatUserListDto, { ChatContactDto } from "../dtos/ChatDto";
 import IUserService from "./interface/IUserService";
 import ChatContactModel from "../database/models/ChatContactModel";
 import { ChatContactDataModel } from "../models/ChatDataModel";
-import { UserBasicDto } from "../dtos/UserDto";
+import { CurrentUserDto, UserBasicDto } from "../dtos/UserDto";
 import { ChatAction } from "../enums/chat.action.enum";
 import UserModel from "../database/models/UserModel";
+import IMiscellaneousService from "./interface/IMiscellaneousService";
 
 @injectable()
 export default class ChatService implements IChatService {
-  private readonly _userService: IUserService;
+  private readonly userService: IUserService;
+  private readonly miscellaneousService: IMiscellaneousService;
+  private readonly currentUser: CurrentUserDto;
+  private readonly currentUserId: number;
 
   constructor(
     @inject(TYPES.SocketIO) private io: SocketIOServer,
-    @inject(TYPES.IUserService)
-    userService: IUserService
+    @inject(TYPES.IUserService) userService: IUserService,
+    @inject(TYPES.IMiscellaneousService) miscellaneousService: IMiscellaneousService
   ) {
-    this._userService = userService;
+    this.userService = userService;
+    this.miscellaneousService = miscellaneousService;
+    this.currentUser = this.miscellaneousService.currentUser();
+    this.currentUserId = this.currentUser.id;
   }
 
   // Max response time 25ms Min response time 19ms
-  async getChatContact(
-    id: number
-  ): Promise<Response<ChatUserListDto[]>> {
-    const result = (await ChatContactModel.findAll({
+  async getChatContact(): Promise<Response<ChatUserListDto[]>> {
+    const result = await ChatContactModel.findAll({
       where: {
-        currentUserId: id,
+        currentUserId: this.currentUserId,
         isActive: true,
         isDeleted: false,
       },
@@ -38,16 +43,18 @@ export default class ChatService implements IChatService {
           model: UserModel,
           as: "user",
           attributes: ["id", "guid", "firstName", "lastName"],
-        }, 
+        },
       ],
-    }));
+    });
 
-    const response: ChatUserListDto[] = result.map(({ dataValues: { user } }) => ({
-      id: user.id,
-      guid: user.guid,
-      firstName: user.firstName,
-      lastName: user.lastName,
-    }));
+    const response: ChatUserListDto[] = result.map(
+      ({ dataValues: { user } }) => ({
+        id: user.id,
+        guid: user.guid,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      })
+    );
 
     if (response) {
       return {
@@ -70,8 +77,8 @@ export default class ChatService implements IChatService {
     currentUserId: number
   ): Promise<Response<ChatContactDto>> {
     const [existingUserResult, currentUserResult] = await Promise.all([
-      this._userService.getById(userId),
-      this._userService.getById(currentUserId),
+      this.userService.getById(userId),
+      this.userService.getById(currentUserId),
     ]);
 
     const existingUser = existingUserResult.data;
@@ -140,8 +147,8 @@ export default class ChatService implements IChatService {
     action: string
   ): Promise<Response<ChatContactDto>> {
     const [existingUserResult, currentUserResult] = await Promise.all([
-      this._userService.getById(userId),
-      this._userService.getById(currentUserId),
+      this.userService.getById(userId),
+      this.userService.getById(currentUserId),
     ]);
 
     const existingUser = existingUserResult.data;

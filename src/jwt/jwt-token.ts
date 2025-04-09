@@ -1,9 +1,8 @@
 import * as jwt from "jsonwebtoken";
 import config from "./jwt-config";
+import { CurrentUserDto } from "../dtos/UserDto";
 
-const generateToken = async (
-  email: string,
-  guid: string,
+const generateToken = async (user: CurrentUserDto,
   expireIn: number = 15552000
 ): Promise<string> => {
   const jwtSecret = config.jwt.secret;
@@ -13,8 +12,10 @@ const generateToken = async (
   
   const token = await jwt.sign(
     {
-      guid: guid,
-      email: email,
+      id: user.id,
+      guid: user.guid,
+      email: user.email,
+      fullName: user.fullName
     },
     jwtSecret,
     {

@@ -10,7 +10,6 @@ export default interface UserDto {
   token?: string;
 }
 
-
 export interface UserBasicDto {
   id: number;
   guid: string;
@@ -21,3 +20,11 @@ export interface UserBasicDto {
   isActive: boolean;
   isDeleted?: boolean;
 }
+
+export interface CurrentUserDto {
+  id: number;
+  guid: string;
+  email: string;
+  fullName: string;
+}
+

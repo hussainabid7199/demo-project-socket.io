@@ -27,14 +27,14 @@ const swaggerDocument = YAML.load(swaggerPath);
 const publicPath = path.join(__dirname, "../public");
 
 import "./controller/controllers";
-import { startCluster } from "./utils/load-balancer/cluster";
+// import { startCluster } from "./utils/load-balancer/cluster";
+import CurrentUserContext from "./middleware/current-user-middleware";
 
 export async function startServer() {
   const sIO = {} as SocketIOServer;
   const container = createContainer(sIO);
   const inversifyServer = new InversifyExpressServer(container);
   const clientIDMiddleware = new ClientIdMiddleware();
-
   inversifyServer.setConfig((app) => {
     app.use(
       cors({
@@ -64,6 +64,7 @@ export async function startServer() {
     app.use(express.static(publicPath));
     app.use(express.json({ limit: "16kb" }));
     app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+    app.use(CurrentUserContext)
   });
 
   inversifyServer.setErrorConfig((app) => {
@@ -117,10 +118,10 @@ export async function startServer() {
   });
 
   process.on("SIGTERM", () => {
-    console.log(`🛑 Worker ${process.pid} is shutting down`);
+    console.log(`Worker ${process.pid} is shutting down`);
     httpServer.close(() => process.exit(0));
   });
 }
 
-// startServer()
-startCluster(startServer);
+startServer()
+// startCluster(startServer);
