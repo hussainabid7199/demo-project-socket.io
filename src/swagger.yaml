@@ -334,7 +334,7 @@ paths:
       tags:
         - Group
       summary: Create a new group
-      description: Creates a new group with the given adminId and group name.
+      description: Creates a new group with the given name.
       security:
         - BearerAuth: []
         - ClientIdHeader: []
@@ -345,15 +345,11 @@ paths:
             schema:
               type: object
               required:
-                - adminId
                 - name
               properties:
-                adminId:
-                  type: number
-                  example: 08e10cc4-d45a-4bbd-8ddd-1c30909ce26b
                 name:
                   type: string
-                  example: "Developers Group"
+                  example: "Friends Group"
       responses:
         '200':
           description: Group created successfully
@@ -369,9 +365,9 @@ paths:
                     type: string
                     example: "Group created successfully"
                   data:
-                    type: object
+                    $ref: '#/components/schemas/GroupDto'
         '400':
-          description: Bad request due to missing parameters or failure
+          description: Invalid request payload or group creation failed
           content:
             application/json:
               schema:
@@ -400,12 +396,13 @@ paths:
                     type: string
                     example: "Internal server error"
 
+  
   /group/member:
     post:
       tags:
         - Group
-      summary: Add a member to a group
-      description: Adds a user as a participant to a group.
+      summary: Add a new member to a group
+      description: Adds a user to a group by groupId and memberId.
       security:
         - BearerAuth: []
         - ClientIdHeader: []
@@ -418,17 +415,13 @@ paths:
               required:
                 - groupId
                 - memberId
-                - currentUserId
               properties:
                 groupId:
-                  type: string
-                  example: "1a2b3c4d-5678-90ef-ghij-1234567890ab"
+                  type: number
+                  example: 101
                 memberId:
-                  type: string
-                  example: "user-uuid-1234"
-                currentUserId:
-                  type: string
-                  example: "admin-uuid-5678"
+                  type: number
+                  example: 5
       responses:
         '200':
           description: Member added successfully
@@ -442,11 +435,11 @@ paths:
                     example: true
                   message:
                     type: string
-                    example: "Member added successfully"
+                    example: "Member added to group"
                   data:
                     $ref: '#/components/schemas/GroupMemberDto'
         '400':
-          description: Bad request - Invalid payload or addition failed
+          description: Invalid request payload or member addition failed
           content:
             application/json:
               schema:
@@ -474,6 +467,7 @@ paths:
                   error:
                     type: string
                     example: "Internal server error"
+
 
 
 
@@ -640,29 +634,40 @@ components:
         lastName:
           type: string
 
-        GroupMemberDto:
+    GroupDto:
       type: object
       properties:
         id:
+          type: number
+          example: 101
+        name:
           type: string
-          example: "participant-uuid-1234"
-        groupId:
-          type: string
-          example: "1a2b3c4d-5678-90ef-ghij-1234567890ab"
-        memberId:
-          type: string
-          example: "user-uuid-1234"
-        role:
-          type: string
-          example: "member"
+          example: "Friends Group"
+        createdBy:
+          type: number
+          example: 1
         createdAt:
           type: string
           format: date-time
-          example: "2025-04-08T12:00:00Z"
         updatedAt:
           type: string
           format: date-time
-          example: "2025-04-08T12:00:00Z"
+
+    GroupMemberDto:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 12
+        groupId:
+          type: number
+          example: 101
+        memberId:
+          type: number
+          example: 5
+        joinedAt:
+          type: string
+          format: date-time
 
 
   securitySchemes:

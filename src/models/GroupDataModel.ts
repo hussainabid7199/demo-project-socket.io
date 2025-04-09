@@ -19,8 +19,7 @@ export interface GroupMemberDataModel {
 
 export interface GroupParticipantDataModel {
   groupId: number,
-  memberId: string,
-  currentUserId: number
+  memberId: string
 }
 
 

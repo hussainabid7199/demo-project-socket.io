@@ -27,7 +27,6 @@ module.exports = {
             model: 'users',
             key: 'guid',
           },
-          unique: true
         },
         isAdmin: {
           type: Sequelize.BOOLEAN,

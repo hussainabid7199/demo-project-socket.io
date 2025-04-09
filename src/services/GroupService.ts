@@ -2,7 +2,6 @@ import { inject, injectable } from "inversify";
 import { TYPES } from "../config/types";
 import { Server as SocketIOServer } from "socket.io";
 import Response from "../dtos/Response";
-import IUserService from "./interface/IUserService";
 import IGroupService from "./interface/IGroupService";
 import UserModel from "../database/models/UserModel";
 import CustomError from "../exceptions/custom-error";
@@ -11,128 +10,168 @@ import { GroupDataModel, GroupMemberDataModel } from "../models/GroupDataModel";
 import { GroupDto, GroupMemberDto } from "../dtos/GroupDto";
 import GroupMemberModel from "../database/models/GroupMemberModel";
 import UnauthorizedError from "../exceptions/unauthorized-error";
+import IMiscellaneousService from "./interface/IMiscellaneousService";
+import { CurrentUserDto, UserBasicDto } from "../dtos/UserDto";
+import sequelize from "../database/connection";
 
 @injectable()
 export default class GroupService implements IGroupService {
-  private readonly _userService: IUserService;
+  private readonly miscellaneousService: IMiscellaneousService;
+  private readonly currentUser: CurrentUserDto;
+  private readonly currentUserGuid: string;
 
   constructor(
     @inject(TYPES.SocketIO) private io: SocketIOServer,
-    @inject(TYPES.IUserService)
-    userService: IUserService
+    @inject(TYPES.IMiscellaneousService)
+    miscellaneousService: IMiscellaneousService
   ) {
-    this._userService = userService;
+    this.miscellaneousService = miscellaneousService;
+    this.currentUser = this.miscellaneousService.currentUser();
+    this.currentUserGuid = this.currentUser.guid;
   }
 
-  async createGroup(
-    adminId: string,
-    name: string
-  ): Promise<Response<GroupDto>> {
-    const userExist = await UserModel.findOne({ where: { guid: adminId } });
+  async createGroup(name: string): Promise<Response<GroupDto>> {
+    const t = await sequelize.transaction();
+    try {
+      const userExist = await UserModel.findOne({
+        where: { guid: this.currentUserGuid },
+      });
 
-    if (!userExist) throw new CustomError("User not found!", 400);
+      if (!userExist) throw new CustomError("User not found!", 400);
 
-    const groupModel: GroupDataModel = {
-      adminId: adminId,
-      name: name,
-      createdBy: userExist.dataValues.guid,
-      isActive: true,
-      isDeleted: false,
-    };
-
-    const { ...groupDbModel } = groupModel;
-    const group: GroupDto = (await GroupModel.create(groupDbModel)).dataValues;
-
-    if (!group)
-      throw new CustomError("Some error occurred while creating group.", 400);
-
-    const groupMemberModel: GroupMemberDataModel = {
-      groupId: group.id,
-      memberId: group.adminId,
-      createdBy: group.adminId,
-      isAdmin: true,
-      isActive: true,
-      isDeleted: false,
-    };
-
-    const { ...groupMemberDbModel } = groupMemberModel;
-    const groupMember = (await GroupMemberModel.create(groupMemberDbModel))
-      .dataValues;
-
-    if (!groupMember)
-      throw new CustomError("Some error occurred while creating group.", 400);
-
-    const response: GroupDto = group;
-
-    if (response) {
-      return {
-        success: true,
-        data: response,
+      const groupModel: GroupDataModel = {
+        adminId: this.currentUserGuid,
+        name: name,
+        createdBy: this.currentUserGuid,
+        isActive: true,
+        isDeleted: false,
       };
-    } else {
+
+      const { ...groupDbModel } = groupModel;
+      const group: GroupDto = (await GroupModel.create(groupDbModel))
+        .dataValues;
+
+      if (!group)
+        throw new CustomError("Some error occurred while creating group.", 400);
+
+      const groupMemberModel: GroupMemberDataModel = {
+        groupId: group.id,
+        memberId: group.adminId,
+        createdBy: group.createdBy,
+        isAdmin: true,
+        isActive: true,
+        isDeleted: false,
+      };
+
+      const { ...groupMemberDbModel } = groupMemberModel;
+      const groupMember = (await GroupMemberModel.create(groupMemberDbModel))
+        .dataValues;
+
+      if (!groupMember)
+        throw new CustomError("Some error occurred while creating group.", 400);
+
+      const response: GroupDto = group;
+
+      if (response) {
+        await t.commit();
+        return {
+          success: true,
+          data: response,
+        };
+      } else {
+        await t.rollback();
+        return {
+          success: false,
+          message: "Message failed",
+        };
+      }
+    } catch (error) {
+      await t.rollback();
+      console.error("Error while creating group:", error);
       return {
         success: false,
-        message: "Message failed",
+        message: `Error while creating group: ${error}`,
       };
     }
   }
 
   async addGroupParticipant(
     groupId: number,
-    memberId: string,
-    currentUserId: number
+    memberId: string
   ): Promise<Response<GroupMemberDto>> {
-    const groupExist = await GroupModel.findOne({ where: { id: groupId }});
+    const t = await sequelize.transaction();
+    try {
+      const group = (await GroupModel.findOne({
+        where: { id: groupId },
+        raw: true,
+      })) as GroupDto | null;
 
-    if (!groupExist) throw new CustomError("Group not found!", 400);
+      if (!group) throw new CustomError("Group not found!", 400);
 
-    const [currentUserExist, memberExist] = await Promise.all([
-      UserModel.findOne({ where: { guid: currentUserId } }),
-      UserModel.findOne({ where: { guid: memberId } }),
-    ]);
+      const member = (await UserModel.findOne({
+        where: { guid: memberId },
+        attributes: ["id", "guid", "firstName", "lastName", "email"],
+        raw: true,
+      })) as UserBasicDto | null;
 
-    if (!currentUserExist || !memberExist)
-      throw new CustomError("User not found!", 400);
+      if (!member) throw new CustomError("User not found!", 400);
 
-    const [isCurrentUserGroupMember, isMemberExist] = await Promise.all([
-      GroupMemberModel.findOne({
-        where: { memberId: currentUserExist.dataValues.guid },
-      }),
-      GroupMemberModel.findOne({
-        where: { memberId: memberExist.dataValues.guid },
-      }),
-    ]);
+      const isCurrentUserGroupMember = await GroupMemberModel.findOne({
+        where: {
+          groupId: group.id,
+          memberId: this.currentUserGuid,
+          isAdmin: true,
+          isActive: true,
+          isDeleted: false,
+        },
+      });
 
-    if (isMemberExist) throw new CustomError("Already added to group", 400);
+      if (!isCurrentUserGroupMember)
+        throw new UnauthorizedError("Unauthorized to add member");
 
-    if (
-      isCurrentUserGroupMember &&
-      !isCurrentUserGroupMember.dataValues.isAdmin
-    )
-      throw new UnauthorizedError("Unauthorized to add member");
+      const isMemberExistInGroup = await GroupMemberModel.findOne({
+        where: {
+          groupId: group.id,
+          memberId: member.guid,
+          isActive: true,
+          isDeleted: false,
+        },
+      });
 
-    const model: GroupMemberDataModel = {
-      groupId: groupExist.dataValues.id,
-      memberId: memberExist.dataValues.guid,
-      createdBy: currentUserExist.dataValues.guid,
-      isAdmin: false,
-      isActive: true,
-      isDeleted: false,
-    };
+      if (isMemberExistInGroup)
+        throw new CustomError("Already added to group", 400);
 
-    
-    const { ...dbModel } = model;
-    const response = (await GroupMemberModel.create(dbModel)).dataValues;
-
-    if (response) {
-      return {
-        success: true,
-        data: response,
+      const model: GroupMemberDataModel = {
+        groupId: group.id,
+        memberId: member.guid,
+        createdBy: this.currentUserGuid,
+        isAdmin: false,
+        isActive: true,
+        isDeleted: false,
       };
-    } else {
+
+      const { ...dbModel } = model;
+      const response = (await GroupMemberModel.create(dbModel)).dataValues;
+
+      if (response) {
+        await t.commit();
+        return {
+          success: true,
+          data: response,
+        };
+      } else {
+        await t.rollback();
+        return {
+          success: false,
+          message: "Some error",
+        };
+      }
+    } catch (error) {
+      await t.rollback();
+      console.error("Error while adding member:", error);
       return {
         success: false,
-        message: "Message failed",
+        message: `Error while adding member: ${error}`,
       };
     }
   }
