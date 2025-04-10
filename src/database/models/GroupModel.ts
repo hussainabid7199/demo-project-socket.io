@@ -59,7 +59,7 @@ GroupModel.init(
 
 GroupModel.belongsTo(UserModel, {
   foreignKey: "adminId",
-  as: "user",
+  as: "users",
 });
 
 export default GroupModel;

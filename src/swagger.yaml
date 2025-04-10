@@ -469,6 +469,119 @@ paths:
                     example: "Internal server error"
 
 
+  /group/member:
+    get:
+      tags:
+        - Group
+      summary: Get all group members
+      description: Retrieves all members.
+      security:
+        - BearerAuth: []
+        - ClientIdHeader: []
+      responses:
+        '200':
+          description: List of group members retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+
+        '400':
+          description: Unable to retrieve members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Invalid request payload"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Internal server error"
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+  /group/member/{groupId}:
+    get:
+      tags:
+        - Group
+      summary: Get group members by groupId
+      description: Retrieves all members of the specified group.
+      security:
+        - BearerAuth: []
+        - ClientIdHeader: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the group to fetch members for
+      responses:
+        '200':
+          description: List of group members retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GroupMemberListDto'
+        '400':
+          description: Invalid request payload or unable to retrieve members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Invalid request payload"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Internal server error"
+                  error:
+                    type: string
+                    example: "Internal server error"
 
 
   /user:
@@ -668,6 +781,22 @@ components:
         joinedAt:
           type: string
           format: date-time
+
+    GroupMemberListDto:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        groupId:
+          type: number
+          example: 101
+        memberId:
+          type: number
+          example: 5
+        memberName:
+          type: string
+          example: "John Doe"
 
 
   securitySchemes:

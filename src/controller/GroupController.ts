@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { inject } from "inversify";
 import {
   controller,
+  httpGet,
   httpPost,
   interfaces,
   request,
@@ -17,7 +18,13 @@ import {
   GroupParticipantDataModel,
 } from "../models/GroupDataModel";
 import IGroupService from "../services/interface/IGroupService";
-import { GroupDto, GroupMemberDto } from "../dtos/GroupDto";
+import {
+  GroupDto,
+  GroupListingDto,
+  GroupMemberDto,
+  GroupMemberListDto,
+  MemberListingDto,
+} from "../dtos/GroupDto";
 import IMiscellaneousService from "../services/interface/IMiscellaneousService";
 import { CurrentUserDto } from "../dtos/UserDto";
 
@@ -35,7 +42,8 @@ export class GroupController implements interfaces.Controller {
     @inject(TYPES.IChatService) chatService: IChatService,
     @inject(TYPES.IUserService) userService: IUserService,
     @inject(TYPES.IGroupService) groupService: IGroupService,
-    @inject(TYPES.IMiscellaneousService) miscellaneousService: IMiscellaneousService
+    @inject(TYPES.IMiscellaneousService)
+    miscellaneousService: IMiscellaneousService
   ) {
     this.chatService = chatService;
     this.userService = userService;
@@ -44,7 +52,6 @@ export class GroupController implements interfaces.Controller {
     this.currentUser = this.miscellaneousService.currentUser();
     this.currentUserId = this.currentUser.id;
     this.currentUserGuid = this.currentUser.guid;
-    
   }
 
   @httpPost("/create", authentication)
@@ -61,9 +68,7 @@ export class GroupController implements interfaces.Controller {
           .json({ success: false, message: "Invalid request payload" });
       }
 
-      const response = await this.groupService.createGroup(
-        model.name
-      );
+      const response = await this.groupService.createGroup(model.name);
 
       if (response && response.data && response.success) {
         return res.status(200).json(response);
@@ -97,6 +102,120 @@ export class GroupController implements interfaces.Controller {
       const response = await this.groupService.addGroupParticipant(
         model.groupId,
         model.memberId
+      );
+
+      if (response && response.data && response.success) {
+        return res.status(200).json(response);
+      } else {
+        return res.status(400).json(response);
+      }
+    } catch (error) {
+      console.error("Error while creating group:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+        error: "Internal server error",
+      });
+    }
+  }
+
+  @httpPost("/member/remove", authentication)
+  public async removeGroupMember(
+    @request() req: Request,
+    @response() res: Response
+  ): Promise<Response<boolean>> {
+    try {
+      const model: GroupParticipantDataModel = req.body;
+
+      if (!model.groupId || !model.memberId || !model.action) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid request payload" });
+      }
+
+      const response = await this.groupService.removeGroupParticipant(
+        model.groupId,
+        model.memberId,
+        model.action
+      );
+
+      if (response && response.data && response.success) {
+        return res.status(200).json(response);
+      } else {
+        return res.status(400).json(response);
+      }
+    } catch (error) {
+      console.error("Error while creating group:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+        error: "Internal server error",
+      });
+    }
+  }
+
+  @httpGet("/", authentication)
+  public async group(
+    @request() req: Request,
+    @response() res: Response
+  ): Promise<Response<GroupListingDto[]>> {
+    try {
+      const response = await this.groupService.getAllGroup();
+
+      if (response && response.data && response.success) {
+        return res.status(200).json(response);
+      } else {
+        return res.status(400).json(response);
+      }
+    } catch (error) {
+      console.error("Error while creating group:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+        error: "Internal server error",
+      });
+    }
+  }
+
+  @httpGet("/member", authentication)
+  public async groupMember(
+    @request() req: Request,
+    @response() res: Response
+  ): Promise<Response<MemberListingDto[]>> {
+    try {
+      const response = await this.groupService.getAllGroupMember();
+
+      if (response && response.data && response.success) {
+        return res.status(200).json(response);
+      } else {
+        return res.status(400).json(response);
+      }
+    } catch (error) {
+      console.error("Error while creating group:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+        error: "Internal server error",
+      });
+    }
+  }
+
+  @httpGet("/member/:groupId", authentication)
+  public async groupMemberByGroupId(
+    @request() req: Request,
+    @response() res: Response
+  ): Promise<Response<GroupMemberListDto[]>> {
+    try {
+      const model: { groupId: number } = req.body;
+
+      if (!model.groupId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid request payload" });
+      }
+
+      const response = await this.groupService.getGroupMemberByGroupId(
+        model.groupId
       );
 
       if (response && response.data && response.success) {

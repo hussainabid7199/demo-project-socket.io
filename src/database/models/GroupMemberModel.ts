@@ -69,7 +69,7 @@ GroupMemberModel.belongsTo(GroupModel, {
 
 GroupMemberModel.belongsTo(UserModel, {
   foreignKey: "memberId",
-  as: "user",
+  as: "users",
 });
 
 export default GroupMemberModel;

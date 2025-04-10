@@ -5,6 +5,7 @@ import Response from "../dtos/Response";
 import IUserService from "./interface/IUserService";
 import { UserBasicDto } from "../dtos/UserDto";
 import UserModel from "../database/models/UserModel";
+import CustomError from "../exceptions/custom-error";
 
 @injectable()
 export default class UserService implements IUserService {
@@ -95,9 +96,13 @@ export default class UserService implements IUserService {
         "isActive",
         "isDeleted",
       ],
-    });
+      raw: true
+    }) as UserBasicDto | null;
 
-    const response: UserBasicDto = user?.dataValues;
+    if(!user)
+      if (!user) throw new CustomError("User not found!", 400);
+
+    const response: UserBasicDto = user;
     if (response) {
       return {
         success: true,

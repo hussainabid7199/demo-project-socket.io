@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { inject, injectable } from "inversify";
 import { TYPES } from "../config/types";
 import { Server as SocketIOServer } from "socket.io";
@@ -7,27 +8,42 @@ import UserModel from "../database/models/UserModel";
 import CustomError from "../exceptions/custom-error";
 import GroupModel from "../database/models/GroupModel";
 import { GroupDataModel, GroupMemberDataModel } from "../models/GroupDataModel";
-import { GroupDto, GroupMemberDto } from "../dtos/GroupDto";
+import {
+  GroupDto,
+  GroupListingDto,
+  GroupMemberBasicDto,
+  GroupMemberDto,
+  GroupMemberListDto,
+  MemberListingDto,
+  // GroupMemberListingDto,
+} from "../dtos/GroupDto";
 import GroupMemberModel from "../database/models/GroupMemberModel";
 import UnauthorizedError from "../exceptions/unauthorized-error";
 import IMiscellaneousService from "./interface/IMiscellaneousService";
 import { CurrentUserDto, UserBasicDto } from "../dtos/UserDto";
 import sequelize from "../database/connection";
+import IUserService from "./interface/IUserService";
+import { GroupMemberAction } from "../enums/group.action.enum";
 
 @injectable()
 export default class GroupService implements IGroupService {
+  private readonly userService: IUserService;
   private readonly miscellaneousService: IMiscellaneousService;
   private readonly currentUser: CurrentUserDto;
   private readonly currentUserGuid: string;
+  private readonly currentUserId: number;
 
   constructor(
     @inject(TYPES.SocketIO) private io: SocketIOServer,
     @inject(TYPES.IMiscellaneousService)
-    miscellaneousService: IMiscellaneousService
+    miscellaneousService: IMiscellaneousService,
+    @inject(TYPES.IUserService) userService: IUserService
   ) {
+    this.userService = userService;
     this.miscellaneousService = miscellaneousService;
     this.currentUser = this.miscellaneousService.currentUser();
     this.currentUserGuid = this.currentUser.guid;
+    this.currentUserId = this.currentUser.id;
   }
 
   async createGroup(name: string): Promise<Response<GroupDto>> {
@@ -172,6 +188,234 @@ export default class GroupService implements IGroupService {
       return {
         success: false,
         message: `Error while adding member: ${error}`,
+      };
+    }
+  }
+
+  async getAllGroup(): Promise<Response<GroupListingDto[]>> {
+    const user = (
+      await this.userService.getByGuid(this.currentUserId, this.currentUserGuid)
+    ).data as UserBasicDto;
+
+    if (!user) throw new CustomError("User not found!", 400);
+
+    const member = await GroupMemberModel.findAll({
+      where: { memberId: user.guid, isActive: true, isDeleted: false },
+      attributes: ["memberId", "isAdmin"],
+      include: [
+        {
+          model: GroupModel,
+          as: "groups",
+          where: { isActive: true, isDeleted: false },
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+
+    const response: GroupListingDto[] = member.map((record) =>
+      record.get({ plain: true })
+    );
+
+    if (response) {
+      return {
+        success: true,
+        status: 200,
+        message: "Chat contact listed successfully.",
+        data: response,
+      };
+    } else {
+      return {
+        success: false,
+        status: 400,
+        message: "Failed to fetch chat contact list.",
+      };
+    }
+  }
+
+  async getAllGroupMember(): Promise<Response<MemberListingDto[]>> {
+    const user = (
+      await this.userService.getByGuid(this.currentUserId, this.currentUserGuid)
+    ).data as UserBasicDto;
+
+    if (!user) throw new CustomError("User not found!", 400);
+
+    const member = await GroupMemberModel.findAll({
+      where: { memberId: user.guid, isActive: true, isDeleted: false },
+      attributes: ["memberId", "isAdmin"],
+      include: [
+        {
+          model: GroupModel,
+          as: "groups",
+          where: { isActive: true, isDeleted: false },
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+
+    const result: GroupListingDto[] = member.map((record) =>
+      record.get({ plain: true })
+    );
+
+    const response: MemberListingDto[] = await Promise.all(
+      result.map(async (x) => {
+        const members = await GroupMemberModel.findAll({
+          where: { groupId: x.groups.id },
+        });
+
+        const memberResponse: GroupMemberListDto[] = members.map((x) => ({
+          id: x.dataValues.id,
+          groupId: x.dataValues.groupId,
+          memberId: x.dataValues.memberId,
+          isAdmin: x.dataValues.isAdmin,
+        }));
+
+        const memberList: MemberListingDto = {
+          group: x,
+          members: memberResponse,
+        };
+
+        return memberList;
+      })
+    );
+
+    if (response) {
+      return {
+        success: true,
+        status: 200,
+        message: "Group member listed successfully.",
+        data: response,
+      };
+    } else {
+      return {
+        success: false,
+        status: 400,
+        message: "Failed to fetch group member list.",
+      };
+    }
+  }
+
+  async getGroupMemberByGroupId(
+    groupId: number
+  ): Promise<Response<GroupMemberListDto[]>> {
+    const user = (
+      await this.userService.getByGuid(this.currentUserId, this.currentUserGuid)
+    ).data as UserBasicDto;
+
+    if (!user) throw new CustomError("User not found!", 400);
+
+    const isCurrentGroupExist = (await GroupModel.findOne({
+      where: { id: groupId },
+      raw: true,
+    })) as GroupDto | null;
+
+    if (!isCurrentGroupExist) throw new CustomError("Group not found", 400);
+
+    const isCurrentUserMember = await GroupMemberModel.findOne({
+      where: { groupId: isCurrentGroupExist.id, memberId: user.guid },
+    });
+
+    if (!isCurrentUserMember)
+      throw new CustomError("You are not a member of this group", 400);
+
+    const allGroupMember = await GroupMemberModel.findAll({
+      where: { groupId: isCurrentGroupExist.id },
+    });
+
+    const response: GroupMemberListDto[] = allGroupMember.map((x) => ({
+      id: x.dataValues.id,
+      groupId: x.dataValues.groupId,
+      memberId: x.dataValues.memberId,
+      isAdmin: x.dataValues.isAdmin,
+    }));
+
+    if (response) {
+      return {
+        success: true,
+        status: 200,
+        message: "Group member listed successfully.",
+        data: response,
+      };
+    } else {
+      return {
+        success: false,
+        status: 400,
+        message: "Failed to fetch group member list.",
+      };
+    }
+  }
+
+  async removeGroupParticipant(
+    groupId: number,
+    memberId: string,
+    action: string
+  ): Promise<Response<boolean>> {
+    const user = (
+      await this.userService.getByGuid(this.currentUserId, this.currentUserGuid)
+    ).data as UserBasicDto;
+
+    if (!user) throw new CustomError("User not found!", 400);
+
+    let isCurrentGroupExist;
+    let member;
+    if (action === GroupMemberAction.REMOVE) {
+      member = memberId;
+      isCurrentGroupExist = (await GroupModel.findOne({
+        where: {
+          id: groupId,
+          adminId: this.currentUserGuid,
+          isActive: true,
+          isDeleted: false,
+        },
+        raw: true,
+      })) as GroupDto | null;
+    } else if (action === GroupMemberAction.LEAVE) {
+      member = this.currentUserGuid;
+      isCurrentGroupExist = (await GroupModel.findOne({
+        where: {
+          id: groupId,
+          isActive: true,
+          isDeleted: false,
+        },
+        raw: true,
+      })) as GroupDto | null;
+    }
+
+    if (!isCurrentGroupExist) throw new CustomError("Group not found!", 400);
+
+    const isHeAGroupMember = (await GroupMemberModel.findOne({
+      where: {
+        groupId: isCurrentGroupExist.id,
+        memberId: member,
+        isActive: true,
+        isDeleted: false,
+      },
+      raw: true,
+    })) as GroupMemberBasicDto | null;
+
+    if (!isHeAGroupMember)
+      throw new CustomError("Member not found in group!", 400);
+
+    isHeAGroupMember.updatedBy = this.currentUserGuid;
+    isHeAGroupMember.isActive = false;
+
+    const response = await GroupMemberModel.update(isHeAGroupMember, {
+      where: {
+        id: isHeAGroupMember.id,
+      },
+    });
+
+    if (response) {
+      return {
+        success: true,
+        status: 200,
+        message: "Group member removed successfully!",
+        data: true,
+      };
+    } else {
+      return {
+        success: false,
+        status: 400,
+        message: "Failed to remove from group.",
       };
     }
   }

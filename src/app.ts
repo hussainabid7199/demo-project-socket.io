@@ -27,8 +27,8 @@ const swaggerDocument = YAML.load(swaggerPath);
 const publicPath = path.join(__dirname, "../public");
 
 import "./controller/controllers";
-// import { startCluster } from "./utils/load-balancer/cluster";
 import CurrentUserContext from "./middleware/current-user-middleware";
+import { startCluster } from "./utils/load-balancer/cluster";
 
 export async function startServer() {
   const sIO = {} as SocketIOServer;
@@ -123,5 +123,5 @@ export async function startServer() {
   });
 }
 
-startServer()
-// startCluster(startServer);
+// startServer()
+startCluster(startServer);
