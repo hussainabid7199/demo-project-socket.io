@@ -14,8 +14,6 @@ import {
   GroupMemberBasicDto,
   GroupMemberDto,
   GroupMemberListDto,
-  MemberListingDto,
-  // GroupMemberListingDto,
 } from "../dtos/GroupDto";
 import GroupMemberModel from "../database/models/GroupMemberModel";
 import UnauthorizedError from "../exceptions/unauthorized-error";
@@ -232,51 +230,74 @@ export default class GroupService implements IGroupService {
     }
   }
 
-  async getAllGroupMember(): Promise<Response<MemberListingDto[]>> {
+  async getAllGroupMember(): Promise<Response<GroupMemberListDto[]>> {
     const user = (
       await this.userService.getByGuid(this.currentUserId, this.currentUserGuid)
     ).data as UserBasicDto;
 
     if (!user) throw new CustomError("User not found!", 400);
 
-    const member = await GroupMemberModel.findAll({
-      where: { memberId: user.guid, isActive: true, isDeleted: false },
-      attributes: ["memberId", "isAdmin"],
-      include: [
-        {
-          model: GroupModel,
-          as: "groups",
-          where: { isActive: true, isDeleted: false },
-          attributes: ["id", "name"],
+    const members = (
+      await GroupMemberModel.findAll({
+        where: { memberId: user.guid, isActive: true, isDeleted: false },
+        attributes: ["memberId", "isAdmin"],
+        include: [
+          {
+            model: GroupModel,
+            as: "groups",
+            where: { isActive: true, isDeleted: false },
+            attributes: ["id", "name"],
+          },
+        ],
+        nest: true,
+      })
+    ).map((record) => record.get({ plain: true }) as GroupListingDto);
+
+    const groupIds: number[] = [...new Set(members.map((m) => m.groups.id))];
+
+    const groupMembers = (
+      await GroupMemberModel.findAll({
+        where: {
+          groupId: groupIds,
         },
-      ],
-    });
+        attributes: ["id", "groupId", "memberId", "isAdmin"],
+      })
+    ).map((record) => record.get({ plain: true }) as GroupMemberDto);
 
-    const result: GroupListingDto[] = member.map((record) =>
-      record.get({ plain: true })
-    );
+    const uniqueMemberGuid: string[] = [
+      ...new Set(groupMembers.map((m) => m.memberId)),
+    ];
 
-    const response: MemberListingDto[] = await Promise.all(
-      result.map(async (x) => {
-        const members = await GroupMemberModel.findAll({
-          where: { groupId: x.groups.id },
+    const users = (
+      await UserModel.findAll({
+        where: { guid: uniqueMemberGuid },
+        attributes: ["id", "guid", "firstName", "lastName", "email"],
+      })
+    ).map((record) => record.get({ plain: true }) as UserBasicDto);
+
+    const userMap = new Map(users.map((u) => [u.guid, u]));
+
+    const response: GroupMemberListDto[] = groupIds.flatMap((groupId) => {
+      const groupInfo = members.find((m) => m.groups.id === groupId)?.groups;
+      const membersForGroup = groupMembers
+        .filter((m) => m.groupId === groupId)
+        .map((m) => {
+          const user = userMap.get(m.memberId)!;
+          return {
+            groupId: m.groupId,
+            memberId: m.memberId,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            isAdmin: m.isAdmin,
+          };
         });
 
-        const memberResponse: GroupMemberListDto[] = members.map((x) => ({
-          id: x.dataValues.id,
-          groupId: x.dataValues.groupId,
-          memberId: x.dataValues.memberId,
-          isAdmin: x.dataValues.isAdmin,
-        }));
-
-        const memberList: MemberListingDto = {
-          group: x,
-          members: memberResponse,
-        };
-
-        return memberList;
-      })
-    );
+      return {
+        group: groupInfo as GroupDto,
+        members: membersForGroup as GroupMemberBasicDto[],
+      };
+    });
 
     if (response) {
       return {
@@ -296,7 +317,7 @@ export default class GroupService implements IGroupService {
 
   async getGroupMemberByGroupId(
     groupId: number
-  ): Promise<Response<GroupMemberListDto[]>> {
+  ): Promise<Response<GroupMemberDto[]>> {
     const user = (
       await this.userService.getByGuid(this.currentUserId, this.currentUserGuid)
     ).data as UserBasicDto;
@@ -319,21 +340,30 @@ export default class GroupService implements IGroupService {
 
     const allGroupMember = await GroupMemberModel.findAll({
       where: { groupId: isCurrentGroupExist.id },
+      raw: true,
     });
 
-    const response: GroupMemberListDto[] = allGroupMember.map((x) => ({
-      id: x.dataValues.id,
-      groupId: x.dataValues.groupId,
-      memberId: x.dataValues.memberId,
-      isAdmin: x.dataValues.isAdmin,
-    }));
+    // const userDetails: any[] = await allGroupMember.map((x)=>{
+    //     return await UserModel.findOne({where: {guid: x.dataValues.memberId, isActive: true, isDeleted: false}, attribute: ["firstName", "lastName"]})
+    // })
+
+    // const members = await UserModel.findOne({where: {guid: }})
+
+    const response = allGroupMember;
+
+    // const response: GroupMemberDto[] = allGroupMember.map((x) => ({
+    //   id: x.dataValues.id,
+    //   groupId: x.dataValues.groupId,
+    //   memberId: x.dataValues.memberId,
+    //   isAdmin: x.dataValues.isAdmin,
+    // }));
 
     if (response) {
       return {
         success: true,
         status: 200,
         message: "Group member listed successfully.",
-        data: response,
+        // data: response,
       };
     } else {
       return {

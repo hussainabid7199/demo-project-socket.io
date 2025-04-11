@@ -1,3 +1,5 @@
+import { UserBasicDto } from "./UserDto";
+
 export interface GroupDto {
   id: number;
   adminId: string;
@@ -10,15 +12,14 @@ export interface GroupDto {
   isDeleted?: boolean;
 }
 
-
 export interface GroupMemberBasicDto {
   id: number;
   groupId: number;
   memberId: string;
   isAdmin: boolean;
-  createdAt: string; 
+  createdAt: string;
   createdBy: string;
-  updatedAt: string | null; 
+  updatedAt: string | null;
   updatedBy: string | null;
   isActive: boolean;
   isDeleted: boolean;
@@ -47,18 +48,43 @@ export interface GroupMemberListingDto {
 
 export interface MemberListingDto {
   group: GroupListingDto;
-  members: GroupMemberListDto[];
+  members: GroupMemberDto[];
 }
 export interface GroupMemberUserDto {
   group: GroupMemberDto;
-  members: GroupMemberListDto[];
+  members: GroupMemberDto[];
 }
 
+export interface GroupMemberUserTestDto {
+  group: GroupMemberDto;
+  user?: UserBasicDto;
+  members: GroupMemberDto[];
+}
 
-
-export interface GroupMemberListDto {
+export interface GroupMemberDto {
   id: number;
   groupId: number;
   memberId: string;
   isAdmin: boolean;
+}
+
+// Updated Dto Below
+
+export interface GroupDto {
+  id: number;
+  name: string;
+}
+
+export interface GroupMemberBasicDto {
+  groupId: number;
+  memberId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  isAdmin: boolean;
+}
+
+export interface GroupMemberListDto {
+  group: GroupDto;
+  members: GroupMemberBasicDto[];
 }

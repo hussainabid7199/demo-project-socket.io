@@ -204,18 +204,18 @@ export class GroupController implements interfaces.Controller {
   public async groupMemberByGroupId(
     @request() req: Request,
     @response() res: Response
-  ): Promise<Response<GroupMemberListDto[]>> {
+  ): Promise<Response<GroupMemberListDto>> {
     try {
-      const model: { groupId: number } = req.body;
+      const { groupId } = req.params;
 
-      if (!model.groupId) {
+      if (!+groupId) {
         return res
           .status(400)
           .json({ success: false, message: "Invalid request payload" });
       }
 
       const response = await this.groupService.getGroupMemberByGroupId(
-        model.groupId
+        +groupId
       );
 
       if (response && response.data && response.success) {

@@ -25,14 +25,13 @@ security:
   - ClientIdHeader: []
 
 paths:
-
   /account/health:
     get:
       tags:
         - Health
       summary: Health check endpoint
       responses:
-        '200':
+        "200":
           description: Returns a greeting message
 
   /account/login:
@@ -54,7 +53,7 @@ paths:
                   type: string
                   example: "password123"
       responses:
-        '200':
+        "200":
           description: Login successful
           content:
             application/json:
@@ -67,7 +66,7 @@ paths:
                     type: string
                   data:
                     type: object
-        '400':
+        "400":
           description: Login failed
 
   /account/register:
@@ -80,9 +79,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserSchema'
+              $ref: "#/components/schemas/UserSchema"
       responses:
-        '201':
+        "201":
           description: Registration successful
           content:
             application/json:
@@ -96,8 +95,8 @@ paths:
                     type: string
                     example: "Registration successful"
                   data:
-                    $ref: '#/components/schemas/UserDto'
-        '400':
+                    $ref: "#/components/schemas/UserDto"
+        "400":
           description: Registration failed
           content:
             application/json:
@@ -114,59 +113,74 @@ paths:
                     type: object
                     nullable: true
                     example: null
-
-  /chat/send:
-    post:
+  
+  # Get
+  /chat/contact/{id}/{guid}:
+    get:
       tags:
         - Chat
-      summary: Send a message to a specific socket
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                userId:
-                  type: number
-                  example: 1
-                socketId:
-                  type: string
-                  example: "vIU4TYqs0m68zsCWAAAR"
-                message:
-                  type: string
-                  example: "Hello from Swagger!"
+      summary: Get chat contacts for a user
+      operationId: getChatContact
+      security:
+        - BearerAuth: []
+        - ClientIdHeader: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the user
+        - name: guid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GUID of the user
       responses:
-        '201':
-          description: Message sent to specific socket
+        "200":
+          description: Chat contact listed successfully.
           content:
             application/json:
               schema:
-                type: boolean
-
-  /chat/broadcast:
-    post:
-      tags:
-        - Chat
-      summary: Broadcast a message to all sockets
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  example: "Broadcasting to all users!"
-      responses:
-        '201':
-          description: Message broadcasted
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/ChatUserListDto"
+        "400":
+          description: Failed to fetch chat contact list.
           content:
             application/json:
               schema:
-                type: boolean
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Failed to fetch chat contact list."
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Internal server error"
+                  error:
+                    type: string
+                    example: "Internal server error"
 
+  # Post
   /chat/create:
     post:
       tags:
@@ -192,7 +206,7 @@ paths:
                   type: number
                   example: 1
       responses:
-        '200':
+        "200":
           description: Chat contact created successfully
           content:
             application/json:
@@ -206,10 +220,10 @@ paths:
                     type: string
                     example: "Chat contact created"
                   data:
-                    $ref: '#/components/schemas/ChatContactDto'
-        '400':
+                    $ref: "#/components/schemas/ChatContactDto"
+        "400":
           description: Invalid input or chat creation failed
-        '500':
+        "500":
           description: Internal server error
 
   /chat/action:
@@ -243,7 +257,7 @@ paths:
                   enum: [BLOCK, MUTE, ARCHIVE]
                   example: BLOCK
       responses:
-        '200':
+        "200":
           description: Chat action performed successfully
           content:
             application/json:
@@ -259,36 +273,25 @@ paths:
                   message:
                     type: string
                     example: "BLOCK successful"
-        '400':
+        "400":
           description: Invalid input or action already performed
-        '500':
+        "500":
           description: Internal server error
 
-  /chat/contact/{id}/{guid}:
+
+  # Get
+  /group:
     get:
       tags:
-        - Chat
-      summary: Get chat contacts for a user
-      operationId: getChatContact
+        - Group
+      summary: Get all groups
+      description: Retrieves a list of all existing groups.
       security:
         - BearerAuth: []
         - ClientIdHeader: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID of the user
-        - name: guid
-          in: path
-          required: true
-          schema:
-            type: string
-          description: GUID of the user
       responses:
-        '200':
-          description: Chat contact listed successfully.
+        "200":
+          description: List of groups retrieved successfully
           content:
             application/json:
               schema:
@@ -297,10 +300,9 @@ paths:
                   success:
                     type: boolean
                     example: true
-                  data:
-                    $ref: '#/components/schemas/ChatUserListDto'
-        '400':
-          description: Failed to fetch chat contact list.
+
+        "400":
+          description: Unable to retrieve groups
           content:
             application/json:
               schema:
@@ -311,8 +313,267 @@ paths:
                     example: false
                   message:
                     type: string
-                    example: "Failed to fetch chat contact list."
-        '500':
+                    example: "Unable to retrieve groups"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Internal server error"
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+  /group/member:
+    get:
+      tags:
+        - Group
+      summary: Get all group members
+      description: Retrieves a list of all group members across all groups.
+      security:
+        - BearerAuth: []
+        - ClientIdHeader: []
+      responses:
+        "200":
+          description: List of group members retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MemberListingDto"
+        "400":
+          description: Unable to retrieve group members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Unable to retrieve group members"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Internal server error"
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+    post:
+      tags:
+        - Group
+      summary: Add a new member to a group
+      description: Adds a user to a group by groupId and memberId.
+      security:
+        - BearerAuth: []
+        - ClientIdHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - groupId
+                - memberId
+              properties:
+                groupId:
+                  type: number
+                  example: 101
+                memberId:
+                  type: number
+                  example: 5
+      responses:
+        "200":
+          description: Member added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Member added to group"
+                  data:
+                    $ref: "#/components/schemas/GroupMemberDto"
+        "400":
+          description: Invalid request payload or member addition failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Invalid request payload"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Internal server error"
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+  /group/member/{groupId}:
+    get:
+      tags:
+        - Group
+      summary: Get group members by groupId
+      description: Retrieves all members of the specified group.
+      security:
+        - BearerAuth: []
+        - ClientIdHeader: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the group to fetch members for
+      responses:
+        "200":
+          description: List of group members retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GroupMemberListDto"
+        "400":
+          description: Invalid request payload or unable to retrieve members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Invalid request payload"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Internal server error"
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+  # Post
+  /group/member/remove:
+    post:
+      tags:
+        - Group
+      summary: Remove a member from a group
+      description: Removes a specific member from a group based on the groupId, memberId, and action provided.
+      security:
+        - BearerAuth: []
+        - ClientIdHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                groupId:
+                  type: integer
+                  example: 123
+                memberId:
+                  type: integer
+                  example: 456
+                action:
+                  type: string
+                  example: ("REMOVE" or "LEAVE")
+              required:
+                - groupId
+                - memberId
+                - action
+      responses:
+        "200":
+          description: Member removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: boolean
+                    example: true
+        "400":
+          description: Invalid request payload or unable to remove member
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Invalid request payload"
+        "500":
           description: Internal server error
           content:
             application/json:
@@ -351,7 +612,7 @@ paths:
                   type: string
                   example: "Friends Group"
       responses:
-        '200':
+        "200":
           description: Group created successfully
           content:
             application/json:
@@ -365,8 +626,8 @@ paths:
                     type: string
                     example: "Group created successfully"
                   data:
-                    $ref: '#/components/schemas/GroupDto'
-        '400':
+                    $ref: "#/components/schemas/GroupDto"
+        "400":
           description: Invalid request payload or group creation failed
           content:
             application/json:
@@ -379,7 +640,7 @@ paths:
                   message:
                     type: string
                     example: "Invalid request payload"
-        '500':
+        "500":
           description: Internal server error
           content:
             application/json:
@@ -395,194 +656,6 @@ paths:
                   error:
                     type: string
                     example: "Internal server error"
-
-  
-  /group/member:
-    post:
-      tags:
-        - Group
-      summary: Add a new member to a group
-      description: Adds a user to a group by groupId and memberId.
-      security:
-        - BearerAuth: []
-        - ClientIdHeader: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - groupId
-                - memberId
-              properties:
-                groupId:
-                  type: number
-                  example: 101
-                memberId:
-                  type: number
-                  example: 5
-      responses:
-        '200':
-          description: Member added successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Member added to group"
-                  data:
-                    $ref: '#/components/schemas/GroupMemberDto'
-        '400':
-          description: Invalid request payload or member addition failed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Invalid request payload"
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Internal server error"
-                  error:
-                    type: string
-                    example: "Internal server error"
-
-
-  /group/member:
-    get:
-      tags:
-        - Group
-      summary: Get all group members
-      description: Retrieves all members.
-      security:
-        - BearerAuth: []
-        - ClientIdHeader: []
-      responses:
-        '200':
-          description: List of group members retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: array
-
-        '400':
-          description: Unable to retrieve members
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Invalid request payload"
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Internal server error"
-                  error:
-                    type: string
-                    example: "Internal server error"
-
-  /group/member/{groupId}:
-    get:
-      tags:
-        - Group
-      summary: Get group members by groupId
-      description: Retrieves all members of the specified group.
-      security:
-        - BearerAuth: []
-        - ClientIdHeader: []
-      parameters:
-        - name: groupId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID of the group to fetch members for
-      responses:
-        '200':
-          description: List of group members retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/GroupMemberListDto'
-        '400':
-          description: Invalid request payload or unable to retrieve members
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Invalid request payload"
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Internal server error"
-                  error:
-                    type: string
-                    example: "Internal server error"
-
 
   /user:
     get:
@@ -590,7 +663,7 @@ paths:
         - User
       summary: Get all users
       responses:
-        '200':
+        "200":
           description: List of users retrieved successfully
           content:
             application/json:
@@ -600,11 +673,11 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/UserBasicDto'
+                      $ref: "#/components/schemas/UserBasicDto"
                   status:
                     type: boolean
                     example: true
-        '400':
+        "400":
           description: Failed to retrieve users
 
   /user/{id}:
@@ -619,12 +692,12 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: User data
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserDto'
+                $ref: "#/components/schemas/UserDto"
 
   /user/{id}/{guid}:
     get:
@@ -643,13 +716,13 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: User data fetched by ID and GUID
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserBasicDto'
-        '400':
+                $ref: "#/components/schemas/UserBasicDto"
+        "400":
           description: Invalid request or user not found
 
 components:
@@ -797,7 +870,6 @@ components:
         memberName:
           type: string
           example: "John Doe"
-
 
   securitySchemes:
     BearerAuth:
