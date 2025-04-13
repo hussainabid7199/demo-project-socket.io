@@ -16,18 +16,30 @@ import { authentication } from "../middleware/authentication.middleware";
 import sequelize from "../database/connection";
 import IUserService from "../services/interface/IUserService";
 import ChatUserListDto from "../dtos/ChatDto";
+import IMiscellaneousService from "../services/interface/IMiscellaneousService";
+import { CurrentUserDto } from "../dtos/UserDto";
 
 @controller("/chat")
 export class ChatController implements interfaces.Controller {
   private readonly chatService: IChatService;
   private readonly userService: IUserService;
+    private readonly miscellaneousService: IMiscellaneousService;
+    private readonly currentUser: CurrentUserDto;
+    private readonly currentUserId: number;
+    private readonly currentUserGuid: string;
 
   constructor(
     @inject(TYPES.IChatService) chatService: IChatService,
-    @inject(TYPES.IUserService) userService: IUserService
+    @inject(TYPES.IUserService) userService: IUserService,
+     @inject(TYPES.IMiscellaneousService)
+        miscellaneousService: IMiscellaneousService
   ) {
     this.chatService = chatService;
     this.userService = userService;
+    this.miscellaneousService = miscellaneousService;
+    this.currentUser = this.miscellaneousService.currentUser();
+    this.currentUserId = this.currentUser.id;
+    this.currentUserGuid = this.currentUser.guid;
   }
 
   @httpGet("/contact/:id/:guid", authentication)
@@ -76,9 +88,9 @@ export class ChatController implements interfaces.Controller {
   ): Promise<Response<ChatDto | void>> {
     const t = await sequelize.transaction();
     try {
-      const { userId, currentUserId } = req.body;
+      const { userId } = req.body;
 
-      if (!userId || !currentUserId) {
+      if (!userId || !this.currentUserId) {
         return res
           .status(400)
           .json({ success: false, message: "Invalid request payload" });
@@ -86,7 +98,7 @@ export class ChatController implements interfaces.Controller {
 
       const response = await this.chatService.createChat(
         userId,
-        currentUserId
+        this.currentUserId
       );
 
       if (response && response.data && response.success) {

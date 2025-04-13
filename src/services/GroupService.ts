@@ -317,59 +317,75 @@ export default class GroupService implements IGroupService {
 
   async getGroupMemberByGroupId(
     groupId: number
-  ): Promise<Response<GroupMemberDto[]>> {
+  ): Promise<Response<GroupMemberListDto[]>> {
     const user = (
       await this.userService.getByGuid(this.currentUserId, this.currentUserGuid)
     ).data as UserBasicDto;
 
     if (!user) throw new CustomError("User not found!", 400);
 
-    const isCurrentGroupExist = (await GroupModel.findOne({
-      where: { id: groupId },
+    const group = (await GroupModel.findOne({
+      where: { id: groupId, isActive: true, isDeleted: false },
+      attributes: ["id", "name"],
       raw: true,
     })) as GroupDto | null;
 
-    if (!isCurrentGroupExist) throw new CustomError("Group not found", 400);
+    if (!group) throw new CustomError("Group not found!", 400);
 
     const isCurrentUserMember = await GroupMemberModel.findOne({
-      where: { groupId: isCurrentGroupExist.id, memberId: user.guid },
+      where: { groupId: group.id, memberId: user.guid },
     });
 
-    if (!isCurrentUserMember)
+    if (!isCurrentUserMember) {
       throw new CustomError("You are not a member of this group", 400);
+    }
 
-    const allGroupMember = await GroupMemberModel.findAll({
-      where: { groupId: isCurrentGroupExist.id },
-      raw: true,
-    });
+    const groupMembers = (
+      await GroupMemberModel.findAll({
+        where: { groupId: group.id },
+        attributes: ["id", "groupId", "memberId", "isAdmin"],
+      })
+    ).map((record) => record.get({ plain: true }) as GroupMemberDto);
 
-    // const userDetails: any[] = await allGroupMember.map((x)=>{
-    //     return await UserModel.findOne({where: {guid: x.dataValues.memberId, isActive: true, isDeleted: false}, attribute: ["firstName", "lastName"]})
-    // })
+    const uniqueMemberGuids: string[] = [
+      ...new Set(groupMembers.map((m) => m.memberId)),
+    ];
 
-    // const members = await UserModel.findOne({where: {guid: }})
+    const users = (
+      await UserModel.findAll({
+        where: { guid: uniqueMemberGuids },
+        attributes: ["guid", "firstName", "lastName", "email"],
+      })
+    ).map((record) => record.get({ plain: true }) as UserBasicDto);
 
-    const response = allGroupMember;
+    const userMap = new Map(users.map((u) => [u.guid, u]));
 
-    // const response: GroupMemberDto[] = allGroupMember.map((x) => ({
-    //   id: x.dataValues.id,
-    //   groupId: x.dataValues.groupId,
-    //   memberId: x.dataValues.memberId,
-    //   isAdmin: x.dataValues.isAdmin,
-    // }));
-
-    if (response) {
+    const members = groupMembers.map((m) => {
+      const user = userMap.get(m.memberId)!;
       return {
-        success: true,
-        status: 200,
-        message: "Group member listed successfully.",
-        // data: response,
+        groupId: m.groupId,
+        memberId: m.memberId,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        isAdmin: m.isAdmin,
       };
-    } else {
+    }) as GroupMemberBasicDto[];
+
+    const response: GroupMemberListDto[] = [{ group, members }];
+
+    if (!response) {
       return {
         success: false,
         status: 400,
         message: "Failed to fetch group member list.",
+      };
+    } else {
+      return {
+        success: true,
+        status: 200,
+        message: "Group member listed successfully.",
+        data: response,
       };
     }
   }
