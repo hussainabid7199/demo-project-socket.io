@@ -7,6 +7,8 @@ info:
 servers:
   - url: http://localhost:3001
     description: Local development server
+  - url: http://localhost:8000
+    description: Proxy server (Load Balancer)
 
 tags:
   - name: Health
@@ -656,6 +658,135 @@ paths:
                   error:
                     type: string
                     example: "Internal server error"
+
+  /group/admin:
+    post:
+      tags:
+        - Group
+      summary: Add a group admin
+      security:
+        - bearerAuth: [] 
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                groupId:
+                  type: integer
+                  example: 101
+                memberId:
+                  type: string
+                  example: eaa0348c-100b-4618-8d5c-bcf99839b05b
+              required:
+                - groupId
+                - memberId
+      responses:
+        "200":
+          description: Group admin added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Group admin added successfully"
+                  data:
+                    $ref: "#/components/schemas/GroupMemberDto"
+        "400":
+          description: Invalid request payload or operation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Invalid request payload"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Internal server error"
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+
+  /group/{groupId}:
+    delete:
+      tags:
+        - Group
+      summary: Delete a group by ID
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the group to delete
+      responses:
+        "204":
+          description: Group deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Group deleted successfully"
+                  data:
+                    $ref: "#/components/schemas/GroupMemberListDto"
+        "400":
+          description: Invalid group ID or failed to delete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Invalid request payload"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Internal server error"
+                  error:
+                    type: string
+                    example: "Internal server error"
+
 
   /user:
     get:

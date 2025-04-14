@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { inject } from "inversify";
 import {
   controller,
+  httpDelete,
   httpGet,
   httpPost,
   interfaces,
@@ -19,7 +20,7 @@ import {
 } from "../models/GroupDataModel";
 import IGroupService from "../services/interface/IGroupService";
 import {
-  GroupDto,
+  GroupBasicDto,
   GroupListingDto,
   GroupMemberDto,
   GroupMemberListDto,
@@ -58,7 +59,7 @@ export class GroupController implements interfaces.Controller {
   public async createGroup(
     @request() req: Request,
     @response() res: Response
-  ): Promise<Response<GroupDto>> {
+  ): Promise<Response<GroupBasicDto>> {
     try {
       const model: GroupDataModel = req.body;
 
@@ -110,7 +111,7 @@ export class GroupController implements interfaces.Controller {
         return res.status(400).json(response);
       }
     } catch (error) {
-      console.error("Error while creating group:", error);
+      console.error("Error while adding group member:", error);
       return res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -145,7 +146,7 @@ export class GroupController implements interfaces.Controller {
         return res.status(400).json(response);
       }
     } catch (error) {
-      console.error("Error while creating group:", error);
+      console.error("Error while removing group member:", error);
       return res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -168,7 +169,7 @@ export class GroupController implements interfaces.Controller {
         return res.status(400).json(response);
       }
     } catch (error) {
-      console.error("Error while creating group:", error);
+      console.error("Error while getting groups:", error);
       return res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -191,7 +192,7 @@ export class GroupController implements interfaces.Controller {
         return res.status(400).json(response);
       }
     } catch (error) {
-      console.error("Error while creating group:", error);
+      console.error("Error while getting member:", error);
       return res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -224,7 +225,74 @@ export class GroupController implements interfaces.Controller {
         return res.status(400).json(response);
       }
     } catch (error) {
-      console.error("Error while creating group:", error);
+      console.error("Error while getting members:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+        error: "Internal server error",
+      });
+    }
+  }
+
+  @httpDelete("/:groupId", authentication)
+  public async deleteGroup(
+    @request() req: Request,
+    @response() res: Response
+  ): Promise<Response<GroupMemberListDto>> {
+    try {
+      const { groupId } = req.params;
+
+      if (!+groupId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid request payload" });
+      }
+
+      const response = await this.groupService.deleteGroup(
+        +groupId
+      );
+
+      if (response && response.data && response.success) {
+        return res.status(204).json(response);
+      } else {
+        return res.status(400).json(response);
+      }
+    } catch (error) {
+      console.error("Error while deleting groups:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+        error: "Internal server error",
+      });
+    }
+  }
+
+  @httpPost("/admin", authentication)
+  public async addGroupAdmin(
+    @request() req: Request,
+    @response() res: Response
+  ): Promise<Response<GroupMemberDto>> {
+    try {
+      const model: GroupParticipantDataModel = req.body;
+
+      if (!model.groupId || !model.memberId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid request payload" });
+      }
+
+      const response = await this.groupService.addGroupAdmin(
+        model.groupId,
+        model.memberId
+      );
+
+      if (response && response.data && response.success) {
+        return res.status(200).json(response);
+      } else {
+        return res.status(400).json(response);
+      }
+    } catch (error) {
+      console.error("Error while adding group member:", error);
       return res.status(500).json({
         success: false,
         message: "Internal server error",

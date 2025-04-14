@@ -35,7 +35,7 @@ export async function startServer(): Promise<void> {
   inversifyServer.setConfig((app) => {
     app.use(
       cors({
-        origin: "http://localhost:3000",
+        origin: ["http://localhost:3000", "http://localhost:8000"],
         allowedHeaders: "*",
         methods: ["GET", "PUT", "POST", "DELETE", "PATCH"],
         credentials: true,
@@ -82,7 +82,7 @@ export async function startServer(): Promise<void> {
   const io = new SocketIOServer(httpServer, {
     pingTimeout: 60000,
     cors: {
-      origin: "http://localhost:3000",
+      origin: ["http://localhost:3000", "http://localhost:8000"],
       allowedHeaders: "*",
       methods: ["GET", "POST"],
       credentials: true,

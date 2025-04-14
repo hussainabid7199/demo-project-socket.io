@@ -17,6 +17,8 @@ import sequelize from "../database/connection";
 import { UserDataModel } from "../models/UserDataModel";
 import BcryptUtils from "../utils/bcrypt.utils";
 import UserModel from "../database/models/UserModel";
+import LoginSchema from "../schema/LoginSchema";
+import { validateSchema } from "../middleware/validation.middleware";
 
 @controller("/account")
 export class AccountController implements interfaces.Controller {
@@ -38,10 +40,10 @@ export class AccountController implements interfaces.Controller {
     });
   }
 
-  @httpPost("/login")
+  @httpPost("/login", validateSchema(LoginSchema))
   public async login(
     @request() req: Request,
-    @response() res: Response
+    @response() res: Response,
   ): Promise<UserDto | void> {
     const model: LoginModel = req.body;
     const t = await sequelize.transaction();

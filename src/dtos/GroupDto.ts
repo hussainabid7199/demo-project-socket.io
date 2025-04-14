@@ -1,6 +1,6 @@
 import { UserBasicDto } from "./UserDto";
 
-export interface GroupDto {
+export interface GroupBasicDto {
   id: number;
   adminId: string;
   name: string;

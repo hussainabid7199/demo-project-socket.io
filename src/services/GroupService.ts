@@ -9,6 +9,7 @@ import CustomError from "../exceptions/custom-error";
 import GroupModel from "../database/models/GroupModel";
 import { GroupDataModel, GroupMemberDataModel } from "../models/GroupDataModel";
 import {
+  GroupBasicDto,
   GroupDto,
   GroupListingDto,
   GroupMemberBasicDto,
@@ -44,7 +45,7 @@ export default class GroupService implements IGroupService {
     this.currentUserId = this.currentUser.id;
   }
 
-  async createGroup(name: string): Promise<Response<GroupDto>> {
+  async createGroup(name: string): Promise<Response<GroupBasicDto>> {
     const t = await sequelize.transaction();
     try {
       const userExist = await UserModel.findOne({
@@ -62,7 +63,7 @@ export default class GroupService implements IGroupService {
       };
 
       const { ...groupDbModel } = groupModel;
-      const group: GroupDto = (await GroupModel.create(groupDbModel))
+      const group: GroupBasicDto = (await GroupModel.create(groupDbModel))
         .dataValues;
 
       if (!group)
@@ -84,7 +85,7 @@ export default class GroupService implements IGroupService {
       if (!groupMember)
         throw new CustomError("Some error occurred while creating group.", 400);
 
-      const response: GroupDto = group;
+      const response: GroupBasicDto = group;
 
       if (response) {
         await t.commit();
@@ -191,54 +192,17 @@ export default class GroupService implements IGroupService {
   }
 
   async getAllGroup(): Promise<Response<GroupListingDto[]>> {
-    const user = (
-      await this.userService.getByGuid(this.currentUserId, this.currentUserGuid)
-    ).data as UserBasicDto;
+    try {
+      const user = (
+        await this.userService.getByGuid(
+          this.currentUserId,
+          this.currentUserGuid
+        )
+      ).data as UserBasicDto;
 
-    if (!user) throw new CustomError("User not found!", 400);
+      if (!user) throw new CustomError("User not found!", 400);
 
-    const member = await GroupMemberModel.findAll({
-      where: { memberId: user.guid, isActive: true, isDeleted: false },
-      attributes: ["memberId", "isAdmin"],
-      include: [
-        {
-          model: GroupModel,
-          as: "groups",
-          where: { isActive: true, isDeleted: false },
-          attributes: ["id", "name"],
-        },
-      ],
-    });
-
-    const response: GroupListingDto[] = member.map((record) =>
-      record.get({ plain: true })
-    );
-
-    if (response) {
-      return {
-        success: true,
-        status: 200,
-        message: "Chat contact listed successfully.",
-        data: response,
-      };
-    } else {
-      return {
-        success: false,
-        status: 400,
-        message: "Failed to fetch chat contact list.",
-      };
-    }
-  }
-
-  async getAllGroupMember(): Promise<Response<GroupMemberListDto[]>> {
-    const user = (
-      await this.userService.getByGuid(this.currentUserId, this.currentUserGuid)
-    ).data as UserBasicDto;
-
-    if (!user) throw new CustomError("User not found!", 400);
-
-    const members = (
-      await GroupMemberModel.findAll({
+      const member = await GroupMemberModel.findAll({
         where: { memberId: user.guid, isActive: true, isDeleted: false },
         attributes: ["memberId", "isAdmin"],
         include: [
@@ -249,68 +213,127 @@ export default class GroupService implements IGroupService {
             attributes: ["id", "name"],
           },
         ],
-        nest: true,
-      })
-    ).map((record) => record.get({ plain: true }) as GroupListingDto);
+      });
 
-    const groupIds: number[] = [...new Set(members.map((m) => m.groups.id))];
+      const response: GroupListingDto[] = member.map((record) =>
+        record.get({ plain: true })
+      );
 
-    const groupMembers = (
-      await GroupMemberModel.findAll({
-        where: {
-          groupId: groupIds,
-        },
-        attributes: ["id", "groupId", "memberId", "isAdmin"],
-      })
-    ).map((record) => record.get({ plain: true }) as GroupMemberDto);
-
-    const uniqueMemberGuid: string[] = [
-      ...new Set(groupMembers.map((m) => m.memberId)),
-    ];
-
-    const users = (
-      await UserModel.findAll({
-        where: { guid: uniqueMemberGuid },
-        attributes: ["id", "guid", "firstName", "lastName", "email"],
-      })
-    ).map((record) => record.get({ plain: true }) as UserBasicDto);
-
-    const userMap = new Map(users.map((u) => [u.guid, u]));
-
-    const response: GroupMemberListDto[] = groupIds.flatMap((groupId) => {
-      const groupInfo = members.find((m) => m.groups.id === groupId)?.groups;
-      const membersForGroup = groupMembers
-        .filter((m) => m.groupId === groupId)
-        .map((m) => {
-          const user = userMap.get(m.memberId)!;
-          return {
-            groupId: m.groupId,
-            memberId: m.memberId,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            isAdmin: m.isAdmin,
-          };
-        });
-
-      return {
-        group: groupInfo as GroupDto,
-        members: membersForGroup as GroupMemberBasicDto[],
-      };
-    });
-
-    if (response) {
-      return {
-        success: true,
-        status: 200,
-        message: "Group member listed successfully.",
-        data: response,
-      };
-    } else {
+      if (response) {
+        return {
+          success: true,
+          status: 200,
+          message: "Chat contact listed successfully.",
+          data: response,
+        };
+      } else {
+        return {
+          success: false,
+          status: 400,
+          message: "Failed to fetch chat contact list.",
+        };
+      }
+    } catch (error) {
+      console.error("Error while creating group:", error);
       return {
         success: false,
-        status: 400,
-        message: "Failed to fetch group member list.",
+        message: `Error while creating group: ${error}`,
+      };
+    }
+  }
+
+  async getAllGroupMember(): Promise<Response<GroupMemberListDto[]>> {
+    try {
+      const user = (
+        await this.userService.getByGuid(
+          this.currentUserId,
+          this.currentUserGuid
+        )
+      ).data as UserBasicDto;
+
+      if (!user) throw new CustomError("User not found!", 400);
+
+      const members = (
+        await GroupMemberModel.findAll({
+          where: { memberId: user.guid, isActive: true, isDeleted: false },
+          attributes: ["memberId", "isAdmin"],
+          include: [
+            {
+              model: GroupModel,
+              as: "groups",
+              where: { isActive: true, isDeleted: false },
+              attributes: ["id", "name"],
+            },
+          ],
+          nest: true,
+        })
+      ).map((record) => record.get({ plain: true }) as GroupListingDto);
+
+      const groupIds: number[] = [...new Set(members.map((m) => m.groups.id))];
+
+      const groupMembers = (
+        await GroupMemberModel.findAll({
+          where: {
+            groupId: groupIds,
+          },
+          attributes: ["id", "groupId", "memberId", "isAdmin"],
+        })
+      ).map((record) => record.get({ plain: true }) as GroupMemberDto);
+
+      const uniqueMemberGuid: string[] = [
+        ...new Set(groupMembers.map((m) => m.memberId)),
+      ];
+
+      const users = (
+        await UserModel.findAll({
+          where: { guid: uniqueMemberGuid },
+          attributes: ["id", "guid", "firstName", "lastName", "email"],
+        })
+      ).map((record) => record.get({ plain: true }) as UserBasicDto);
+
+      const userMap = new Map(users.map((u) => [u.guid, u]));
+
+      const response: GroupMemberListDto[] = groupIds.flatMap((groupId) => {
+        const groupInfo = members.find((m) => m.groups.id === groupId)?.groups;
+        const membersForGroup = groupMembers
+          .filter((m) => m.groupId === groupId)
+          .map((m) => {
+            const user = userMap.get(m.memberId)!;
+            return {
+              groupId: m.groupId,
+              memberId: m.memberId,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              email: user.email,
+              isAdmin: m.isAdmin,
+            };
+          });
+
+        return {
+          group: groupInfo as GroupDto,
+          members: membersForGroup as GroupMemberBasicDto[],
+        };
+      });
+
+      if (response) {
+        return {
+          success: true,
+          status: 200,
+          message: "Group member listed successfully.",
+          data: response,
+        };
+      } else {
+        return {
+          success: false,
+          status: 400,
+          message: "Failed to fetch group member list.",
+        };
+      }
+    } catch (error) {
+      console.error("Error while creating group:", error);
+      return {
+        success: false,
+        message: `Error while creating group: ${error}`,
       };
     }
   }
@@ -318,74 +341,85 @@ export default class GroupService implements IGroupService {
   async getGroupMemberByGroupId(
     groupId: number
   ): Promise<Response<GroupMemberListDto[]>> {
-    const user = (
-      await this.userService.getByGuid(this.currentUserId, this.currentUserGuid)
-    ).data as UserBasicDto;
+    try {
+      const user = (
+        await this.userService.getByGuid(
+          this.currentUserId,
+          this.currentUserGuid
+        )
+      ).data as UserBasicDto;
 
-    if (!user) throw new CustomError("User not found!", 400);
+      if (!user) throw new CustomError("User not found!", 400);
 
-    const group = (await GroupModel.findOne({
-      where: { id: groupId, isActive: true, isDeleted: false },
-      attributes: ["id", "name"],
-      raw: true,
-    })) as GroupDto | null;
+      const group = (await GroupModel.findOne({
+        where: { id: groupId, isActive: true, isDeleted: false },
+        attributes: ["id", "name"],
+        raw: true,
+      })) as GroupDto | null;
 
-    if (!group) throw new CustomError("Group not found!", 400);
+      if (!group) throw new CustomError("Group not found!", 400);
 
-    const isCurrentUserMember = await GroupMemberModel.findOne({
-      where: { groupId: group.id, memberId: user.guid },
-    });
+      const isCurrentUserMember = await GroupMemberModel.findOne({
+        where: { groupId: group.id, memberId: user.guid },
+      });
 
-    if (!isCurrentUserMember) {
-      throw new CustomError("You are not a member of this group", 400);
-    }
+      if (!isCurrentUserMember) {
+        throw new CustomError("You are not a member of this group", 400);
+      }
 
-    const groupMembers = (
-      await GroupMemberModel.findAll({
-        where: { groupId: group.id },
-        attributes: ["id", "groupId", "memberId", "isAdmin"],
-      })
-    ).map((record) => record.get({ plain: true }) as GroupMemberDto);
+      const groupMembers = (
+        await GroupMemberModel.findAll({
+          where: { groupId: group.id },
+          attributes: ["id", "groupId", "memberId", "isAdmin"],
+        })
+      ).map((record) => record.get({ plain: true }) as GroupMemberDto);
 
-    const uniqueMemberGuids: string[] = [
-      ...new Set(groupMembers.map((m) => m.memberId)),
-    ];
+      const uniqueMemberGuids: string[] = [
+        ...new Set(groupMembers.map((m) => m.memberId)),
+      ];
 
-    const users = (
-      await UserModel.findAll({
-        where: { guid: uniqueMemberGuids },
-        attributes: ["guid", "firstName", "lastName", "email"],
-      })
-    ).map((record) => record.get({ plain: true }) as UserBasicDto);
+      const users = (
+        await UserModel.findAll({
+          where: { guid: uniqueMemberGuids },
+          attributes: ["guid", "firstName", "lastName", "email"],
+        })
+      ).map((record) => record.get({ plain: true }) as UserBasicDto);
 
-    const userMap = new Map(users.map((u) => [u.guid, u]));
+      const userMap = new Map(users.map((u) => [u.guid, u]));
 
-    const members = groupMembers.map((m) => {
-      const user = userMap.get(m.memberId)!;
-      return {
-        groupId: m.groupId,
-        memberId: m.memberId,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        isAdmin: m.isAdmin,
-      };
-    }) as GroupMemberBasicDto[];
+      const members = groupMembers.map((m) => {
+        const user = userMap.get(m.memberId)!;
+        return {
+          groupId: m.groupId,
+          memberId: m.memberId,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          isAdmin: m.isAdmin,
+        };
+      }) as GroupMemberBasicDto[];
 
-    const response: GroupMemberListDto[] = [{ group, members }];
+      const response: GroupMemberListDto[] = [{ group, members }];
 
-    if (!response) {
+      if (!response) {
+        return {
+          success: false,
+          status: 400,
+          message: "Failed to fetch group member list.",
+        };
+      } else {
+        return {
+          success: true,
+          status: 200,
+          message: "Group member listed successfully.",
+          data: response,
+        };
+      }
+    } catch (error) {
+      console.error("Error while creating group:", error);
       return {
         success: false,
-        status: 400,
-        message: "Failed to fetch group member list.",
-      };
-    } else {
-      return {
-        success: true,
-        status: 200,
-        message: "Group member listed successfully.",
-        data: response,
+        message: `Error while creating group: ${error}`,
       };
     }
   }
@@ -395,17 +429,170 @@ export default class GroupService implements IGroupService {
     memberId: string,
     action: string
   ): Promise<Response<boolean>> {
-    const user = (
-      await this.userService.getByGuid(this.currentUserId, this.currentUserGuid)
-    ).data as UserBasicDto;
+    const t = await sequelize.transaction();
+    try {
+      const user = (
+        await this.userService.getByGuid(
+          this.currentUserId,
+          this.currentUserGuid
+        )
+      ).data as UserBasicDto;
 
-    if (!user) throw new CustomError("User not found!", 400);
+      if (!user) throw new CustomError("User not found!", 400);
 
-    let isCurrentGroupExist;
-    let member;
-    if (action === GroupMemberAction.REMOVE) {
-      member = memberId;
-      isCurrentGroupExist = (await GroupModel.findOne({
+      let isCurrentGroupExist;
+      let member;
+      if (action === GroupMemberAction.REMOVE) {
+        member = memberId;
+        isCurrentGroupExist = (await GroupModel.findOne({
+          where: {
+            id: groupId,
+            adminId: this.currentUserGuid,
+            isActive: true,
+            isDeleted: false,
+          },
+          raw: true,
+        })) as GroupDto | null;
+      } else if (action === GroupMemberAction.LEAVE) {
+        member = this.currentUserGuid;
+        isCurrentGroupExist = (await GroupModel.findOne({
+          where: {
+            id: groupId,
+            isActive: true,
+            isDeleted: false,
+          },
+          raw: true,
+        })) as GroupDto | null;
+      }
+
+      if (!isCurrentGroupExist) throw new CustomError("Group not found!", 400);
+
+      const isHeAGroupMember = (await GroupMemberModel.findOne({
+        where: {
+          groupId: isCurrentGroupExist.id,
+          memberId: member,
+          isActive: true,
+          isDeleted: false,
+        },
+        raw: true,
+      })) as GroupMemberBasicDto | null;
+
+      if (!isHeAGroupMember)
+        throw new CustomError("Member not found in group!", 400);
+
+      isHeAGroupMember.updatedBy = this.currentUserGuid;
+      isHeAGroupMember.isActive = false;
+
+      const response = await GroupMemberModel.update(isHeAGroupMember, {
+        where: {
+          id: isHeAGroupMember.id,
+        },
+      });
+
+      if (response) {
+        await t.commit();
+        return {
+          success: true,
+          status: 200,
+          message: "Group member removed successfully!",
+          data: true,
+        };
+      } else {
+        await t.rollback();
+        return {
+          success: false,
+          status: 400,
+          message: "Failed to remove from group.",
+        };
+      }
+    } catch (error) {
+      await t.rollback();
+      console.error("Error while creating group:", error);
+      return {
+        success: false,
+        message: `Error while creating group: ${error}`,
+      };
+    }
+  }
+
+  async deleteGroup(groupId: number): Promise<Response<GroupDto>> {
+    const t = await sequelize.transaction();
+    try {
+      const user = (
+        await this.userService.getByGuid(
+          this.currentUserId,
+          this.currentUserGuid
+        )
+      ).data as UserBasicDto;
+
+      if (!user) throw new CustomError("User not found!", 400);
+
+      const group = (await GroupModel.findOne({
+        where: {
+          id: groupId,
+          isActive: true,
+          isDeleted: false,
+        },
+        raw: true,
+      })) as GroupBasicDto | null;
+
+      if (!group) throw new CustomError("Group not found!", 400);
+
+      if (
+        group &&
+        group.adminId === this.currentUserGuid &&
+        group.createdBy === this.currentUserGuid
+      ) {
+        group.isActive = false;
+        group.isDeleted = true;
+        group.updatedBy = this.currentUserGuid;
+      }
+
+      const response = await GroupModel.update(group, {
+        where: { id: group.id, isActive: true, isDeleted: false },
+      });
+
+      if (response) {
+        await t.commit();
+        return {
+          success: true,
+          status: 204,
+          message: "Group deleted successfully!",
+        };
+      } else {
+        await t.rollback();
+        return {
+          success: false,
+          status: 400,
+          message: "Failed to delete group.",
+        };
+      }
+    } catch (error) {
+      await t.rollback();
+      console.error("Error while creating group:", error);
+      return {
+        success: false,
+        message: `Error while creating group: ${error}`,
+      };
+    }
+  }
+
+  async addGroupAdmin(
+    groupId: number,
+    memberId: string
+  ): Promise<Response<GroupBasicDto>> {
+    const t = await sequelize.transaction();
+    try {
+      const user = (
+        await this.userService.getByGuid(
+          this.currentUserId,
+          this.currentUserGuid
+        )
+      ).data as UserBasicDto;
+
+      if (!user) throw new CustomError("User not found!", 400);
+
+      const group = (await GroupModel.findOne({
         where: {
           id: groupId,
           adminId: this.currentUserGuid,
@@ -413,55 +600,55 @@ export default class GroupService implements IGroupService {
           isDeleted: false,
         },
         raw: true,
-      })) as GroupDto | null;
-    } else if (action === GroupMemberAction.LEAVE) {
-      member = this.currentUserGuid;
-      isCurrentGroupExist = (await GroupModel.findOne({
-        where: {
-          id: groupId,
-          isActive: true,
-          isDeleted: false,
-        },
+      })) as GroupBasicDto | null;
+
+      if (!group) throw new CustomError("Group not found!", 400);
+
+      const member = (await UserModel.findOne({
+        where: { guid: memberId, isActive: true, isDeleted: false },
+        attributes: ["id", "guid", "firstName", "lastName", "email"],
         raw: true,
-      })) as GroupDto | null;
-    }
+      })) as UserBasicDto | null;
 
-    if (!isCurrentGroupExist) throw new CustomError("Group not found!", 400);
+      if (!member) throw new CustomError("User not found!", 400);
 
-    const isHeAGroupMember = (await GroupMemberModel.findOne({
-      where: {
-        groupId: isCurrentGroupExist.id,
-        memberId: member,
+      const groupMemberModel: GroupMemberDataModel = {
+        groupId: group.id,
+        memberId: member.guid,
+        createdBy: this.currentUserGuid,
+        isAdmin: true,
         isActive: true,
         isDeleted: false,
-      },
-      raw: true,
-    })) as GroupMemberBasicDto | null;
-
-    if (!isHeAGroupMember)
-      throw new CustomError("Member not found in group!", 400);
-
-    isHeAGroupMember.updatedBy = this.currentUserGuid;
-    isHeAGroupMember.isActive = false;
-
-    const response = await GroupMemberModel.update(isHeAGroupMember, {
-      where: {
-        id: isHeAGroupMember.id,
-      },
-    });
-
-    if (response) {
-      return {
-        success: true,
-        status: 200,
-        message: "Group member removed successfully!",
-        data: true,
       };
-    } else {
+
+      const { ...groupMemberDbModel } = groupMemberModel;
+      const groupMember = (await GroupMemberModel.create(groupMemberDbModel))
+        .dataValues;
+
+      if (!groupMember)
+        throw new CustomError("Some error occurred while adding member.", 400);
+
+      const response: GroupBasicDto = group;
+
+      if (response) {
+        await t.commit();
+        return {
+          success: true,
+          data: response,
+        };
+      } else {
+        await t.rollback();
+        return {
+          success: false,
+          message: "Message failed",
+        };
+      }
+    } catch (error) {
+      await t.rollback();
+      console.error("Error while creating group:", error);
       return {
         success: false,
-        status: 400,
-        message: "Failed to remove from group.",
+        message: `Error while creating group: ${error}`,
       };
     }
   }
