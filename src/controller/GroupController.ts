@@ -43,8 +43,7 @@ export class GroupController implements interfaces.Controller {
     @inject(TYPES.IChatService) chatService: IChatService,
     @inject(TYPES.IUserService) userService: IUserService,
     @inject(TYPES.IGroupService) groupService: IGroupService,
-    @inject(TYPES.IMiscellaneousService)
-    miscellaneousService: IMiscellaneousService
+    @inject(TYPES.IMiscellaneousService) miscellaneousService: IMiscellaneousService
   ) {
     this.chatService = chatService;
     this.userService = userService;

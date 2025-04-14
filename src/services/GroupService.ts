@@ -43,6 +43,7 @@ export default class GroupService implements IGroupService {
     this.currentUser = this.miscellaneousService.currentUser();
     this.currentUserGuid = this.currentUser.guid;
     this.currentUserId = this.currentUser.id;
+    // console.log("Injected io instance clients:", this.io.engine.clientsCount);
   }
 
   async createGroup(name: string): Promise<Response<GroupBasicDto>> {
@@ -88,6 +89,19 @@ export default class GroupService implements IGroupService {
       const response: GroupBasicDto = group;
 
       if (response) {
+        const socketsInRoom = await this.io.in(this.currentUserGuid).fetchSockets();
+        console.log("Sockets in room:", socketsInRoom.length);
+
+        const socketResponse = this.io
+          .to("1")
+          .emit("group_created", {
+            groupId: group.id,
+            name: group.name,
+            createdBy: "1",
+          });
+
+        console.log("socketResponse", socketResponse);
+
         await t.commit();
         return {
           success: true,
