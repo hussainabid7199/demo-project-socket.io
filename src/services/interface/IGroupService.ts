@@ -4,7 +4,7 @@ import Response from "../../dtos/Response";
 export default interface IGroupService {
   getAllGroup(): Promise<Response<GroupListingDto[]>>;
   getAllGroupMember(): Promise<Response<GroupMemberListDto[]>>;
-  getGroupMemberByGroupId(groupId: number): Promise<Response<any[]>>;
+  getGroupMemberByGroupId(groupId: number): Promise<Response<GroupMemberListDto[]>>;
   createGroup(name: string): Promise<Response<GroupDto>>;
   addGroupParticipant(groupId: number, memberId: string): Promise<Response<GroupMemberDto>>;
   removeGroupParticipant(groupId: number, memberId: string, action: string): Promise<Response<boolean>>;
