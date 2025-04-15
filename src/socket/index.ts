@@ -11,7 +11,7 @@ export class SocketServer {
   public initializeSocketIO(io: SocketIOServer): void {
     this.io = io;
 
-    io.on("connection", async (socket: Socket & { user?: any }) => {
+    io.on("connection", async (socket: Socket & { user?: CurrentUserDto }) => {
       try {
         const token: string = socket.handshake.auth?.token || "";
 
@@ -35,7 +35,7 @@ export class SocketServer {
         }
 
         const socketUser: CurrentUserDto = { id, guid, email, fullName };
-        socket.user = socketUser;
+        socket.user = socketUser as CurrentUserDto;
         socket.join(guid);
         socket.emit(ChatEventEnum.CONNECTED_EVENT);
         console.log("User connected 🗼. user-unique-id: ", guid);
@@ -45,8 +45,8 @@ export class SocketServer {
         this.mountParticipantStoppedTypingEvent(socket);
 
         socket.on(ChatEventEnum.DISCONNECT_EVENT, () => {
-          console.log("user has disconnected 🚫. userId: " + socket.user.guid);
-          if (socket.user.guid) {
+          console.log("user has disconnected 🚫. userId: " + socket?.user?.guid);
+          if (socket?.user?.guid) {
             socket.leave(socket.user.guid);
           }
         });
