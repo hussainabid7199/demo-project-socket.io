@@ -44,9 +44,7 @@ export default class GroupService implements IGroupService {
     this.currentUser = this.miscellaneousService.currentUser();
     this.currentUserGuid = this.currentUser.guid;
     this.currentUserId = this.currentUser.id;
-    // console.log("Injected io instance clients:", this.io.engine.clientsCount);
   }
-
 
   async createGroup(name: string): Promise<Response<GroupBasicDto>> {
     const t = await sequelize.transaction();
@@ -89,9 +87,13 @@ export default class GroupService implements IGroupService {
         throw new CustomError("Some error occurred while creating group.", 400);
 
       const response: GroupBasicDto = group;
+      this.io.emitSocketEvent(
+        this.currentUserGuid,
+        ChatEventEnum.NEW_CHAT_EVENT,
+        response
+      );
 
       if (response) {
-        this.io.emitSocketEvent(this.currentUserGuid, ChatEventEnum.NEW_CHAT_EVENT, response);
         await t.commit();
         return {
           success: true,

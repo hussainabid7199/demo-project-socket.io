@@ -38,14 +38,14 @@ export class SocketServer {
         socket.user = socketUser as CurrentUserDto;
         socket.join(guid);
         socket.emit(ChatEventEnum.CONNECTED_EVENT);
-        console.log("User connected 🗼. user-unique-id: ", guid);
+        console.log("user connected 🗼. user-unique-id: ", guid);
 
         this.mountJoinChatEvent(socket);
         this.mountParticipantTypingEvent(socket);
         this.mountParticipantStoppedTypingEvent(socket);
 
         socket.on(ChatEventEnum.DISCONNECT_EVENT, () => {
-          console.log("user has disconnected 🚫. userId: " + socket?.user?.guid);
+          console.log("user has disconnected 🚫. user-unique-id: " + socket?.user?.guid);
           if (socket?.user?.guid) {
             socket.leave(socket.user.guid);
           }

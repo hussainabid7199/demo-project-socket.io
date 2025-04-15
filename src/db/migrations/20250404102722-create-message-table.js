@@ -19,16 +19,6 @@ module.exports = {
             model: 'chat_contacts',
             key: 'id',
           },
-          unique: true
-        },
-        chatContactUserId: {
-          type: Sequelize.INTEGER,
-          allowNull: true,
-          references: {
-            model: 'chat_contacts',
-            key: 'userId',
-          },
-          unique: true
         },
         groupId: {
           type: Sequelize.INTEGER,
@@ -37,7 +27,6 @@ module.exports = {
             model: 'groups',
             key: 'id',
           },
-          unique: true
         },
         groupMemberId: {
           type: Sequelize.INTEGER,
@@ -46,15 +35,6 @@ module.exports = {
             model: 'group_members',
             key: 'id',
           }
-        },
-        groupMemberUserId: {
-          type: Sequelize.INTEGER,
-          allowNull: true,
-          references: {
-            model: 'group_members',
-            key: 'userId',
-          },
-          unique: true
         },
         currentUserId: {
           type: Sequelize.INTEGER,

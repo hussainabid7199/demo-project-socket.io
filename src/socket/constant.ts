@@ -1,38 +1,17 @@
 export enum ChatEventEnum {
-    // once user is ready to go
+
     CONNECTED_EVENT = "connected",
-  
-    // when user gets disconnected
-    DISCONNECT_EVENT = "disconnect",
-  
-    // when user joins a socket room
-    JOIN_CHAT_EVENT = "joinChat",
-  
-    // when participant gets removed from group, chat gets deleted or leaves a group
-    LEAVE_CHAT_EVENT = "leaveChat",
-  
-    // when admin updates a group name
-    UPDATE_GROUP_NAME_EVENT = "updateGroupName",
-  
-    // when new message is received
-    MESSAGE_RECEIVED_EVENT = "messageReceived",
-  
-    // when there is new one on one chat, new group chat or user gets added in the group
-    NEW_CHAT_EVENT = "newChat",
-  
-    // when there is an error in socket
+    DISCONNECT_EVENT = "disconnect", 
+    JOIN_CHAT_EVENT = "joinChat",  // when user joins a socket room
+    LEAVE_CHAT_EVENT = "leaveChat", // when participant gets removed from group, chat gets deleted or leaves a group
+    UPDATE_GROUP_NAME_EVENT = "updateGroupName", // when admin updates a group name
+    MESSAGE_RECEIVED_EVENT = "messageReceived",   // when new message is received
+    NEW_CHAT_EVENT = "newChat",    // when there is new one on one chat, new group chat or user gets added in the group
     SOCKET_ERROR_EVENT = "socketError",
-  
-    // when participant stops typing
     STOP_TYPING_EVENT = "stopTyping",
-  
-    // when participant starts typing
     TYPING_EVENT = "typing",
-  
-    // when message is deleted
     MESSAGE_DELETE_EVENT = "messageDeleted"
   }
   
-  // Optional: Array of available event values
   export const AvailableChatEvents = Object.values(ChatEventEnum);
   
