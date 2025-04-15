@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { inject, injectable } from "inversify";
 import { TYPES } from "../config/types";
-import { Server as SocketIOServer } from "socket.io";
 import Response from "../dtos/Response";
 import IGroupService from "./interface/IGroupService";
 import UserModel from "../database/models/UserModel";
@@ -23,6 +22,8 @@ import { CurrentUserDto, UserBasicDto } from "../dtos/UserDto";
 import sequelize from "../database/connection";
 import IUserService from "./interface/IUserService";
 import { GroupMemberAction } from "../enums/group.action.enum";
+import { ChatEventEnum } from "../socket/constant";
+import { SocketServer } from "../socket";
 
 @injectable()
 export default class GroupService implements IGroupService {
@@ -33,7 +34,7 @@ export default class GroupService implements IGroupService {
   private readonly currentUserId: number;
 
   constructor(
-    @inject(TYPES.SocketIO) private io: SocketIOServer,
+    @inject(TYPES.SocketServer) private io: SocketServer,
     @inject(TYPES.IMiscellaneousService)
     miscellaneousService: IMiscellaneousService,
     @inject(TYPES.IUserService) userService: IUserService
@@ -45,6 +46,7 @@ export default class GroupService implements IGroupService {
     this.currentUserId = this.currentUser.id;
     // console.log("Injected io instance clients:", this.io.engine.clientsCount);
   }
+
 
   async createGroup(name: string): Promise<Response<GroupBasicDto>> {
     const t = await sequelize.transaction();
@@ -89,19 +91,7 @@ export default class GroupService implements IGroupService {
       const response: GroupBasicDto = group;
 
       if (response) {
-        const socketsInRoom = await this.io.in(this.currentUserGuid).fetchSockets();
-        console.log("Sockets in room:", socketsInRoom.length);
-
-        const socketResponse = this.io
-          .to("1")
-          .emit("group_created", {
-            groupId: group.id,
-            name: group.name,
-            createdBy: "1",
-          });
-
-        console.log("socketResponse", socketResponse);
-
+        this.io.emitSocketEvent(this.currentUserGuid, ChatEventEnum.NEW_CHAT_EVENT, response);
         await t.commit();
         return {
           success: true,

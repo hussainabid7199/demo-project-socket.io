@@ -14,10 +14,10 @@ import { Server as SocketIOServer } from "socket.io";
 import ClientIdMiddleware from "./middleware/clientid.middleware";
 import { InversifyExpressServer } from "inversify-express-utils";
 import { createContainer } from "./config/ioc";
-import { TYPES } from "./config/types";
 import sequelize from "./database/connection";
 import "./controller/controllers";
 import CurrentUserContext from "./middleware/current-user-middleware";
+import { SocketServer } from "./socket";
 
 dotenv.config();
 dotenv.config({ path: `.env.${process.env.NODE_ENV?.trim()}` });
@@ -27,8 +27,20 @@ const swaggerDocument = YAML.load(swaggerPath);
 const publicPath = path.join(__dirname, "../public");
 
 export async function startServer(): Promise<void> {
-  const sIO = {} as SocketIOServer;
-  const container = createContainer(sIO);
+  const httpServer = http.createServer();
+  const socketServer = new SocketServer();
+  const io = new SocketIOServer(httpServer, {
+    pingTimeout: 60000,
+    cors: {
+      origin: ["http://localhost:3000", "http://localhost:8000"],
+      allowedHeaders: "*",
+      methods: ["GET", "POST"],
+      credentials: true,
+    },
+  });
+
+  socketServer.initializeSocketIO(io);
+  const container = createContainer(socketServer);
   const inversifyServer = new InversifyExpressServer(container);
   const clientIDMiddleware = new ClientIdMiddleware();
 
@@ -67,6 +79,7 @@ export async function startServer(): Promise<void> {
       console.log(`📥 ${req.method} ${req.url} | 🔊 Port: ${PORT} | 👷 PID: ${process.pid}`);
       next();
     });
+    app.set("io", io);
   });
 
   inversifyServer.setErrorConfig((app) => {
@@ -76,31 +89,8 @@ export async function startServer(): Promise<void> {
     });
   });
 
-  const appServer = inversifyServer.build();
-  const httpServer = http.createServer(appServer);
-
-  const io = new SocketIOServer(httpServer, {
-    pingTimeout: 60000,
-    cors: {
-      origin: ["http://localhost:3000", "http://localhost:8000"],
-      allowedHeaders: "*",
-      methods: ["GET", "POST"],
-      credentials: true,
-    },
-  });
-  container.rebind<SocketIOServer>(TYPES.SocketIO).toConstantValue(io);
-
-  io.on("connection", (socket) => {
-    console.log("Client connected:", socket.id);
-
-    socket.on("connect_error", (err) => {
-      console.log(err.message);
-    });
-
-    socket.on("disconnect", () => {
-      console.log("User disconnected with socket id:", socket.id);
-    });
-  });
+  const server = inversifyServer.build();
+  httpServer.on("request", server);
 
   const port = parseInt(process.env.PORT || "3001", 10);
   httpServer.listen(port, async () => {

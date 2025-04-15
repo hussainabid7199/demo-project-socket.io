@@ -1,15 +1,15 @@
 import { inject, injectable } from "inversify";
 import { TYPES } from "../config/types";
-import { Server as SocketIOServer } from "socket.io";
 import Response from "../dtos/Response";
 import IUserService from "./interface/IUserService";
 import { UserBasicDto } from "../dtos/UserDto";
 import UserModel from "../database/models/UserModel";
 import CustomError from "../exceptions/custom-error";
+import { SocketServer } from "../socket";
 
 @injectable()
 export default class UserService implements IUserService {
-  constructor(@inject(TYPES.SocketIO) private io: SocketIOServer) {}
+  constructor(@inject(TYPES.SocketServer) private io: SocketServer) {}
 
   async get(): Promise<Response<UserBasicDto[]>> {
     const users = await UserModel.findAll({

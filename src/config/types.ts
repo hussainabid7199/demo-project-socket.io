@@ -1,6 +1,6 @@
 "use-strict"
 export const TYPES = {
-  SocketIO: Symbol.for("SocketIO"),
+  SocketServer: Symbol.for("SocketServer"),
   IUserService: Symbol.for("IUserService"),
   IAccountService: Symbol.for("IAccountService"),
   IMiscellaneousService: Symbol.for("IMiscellaneousService"),

@@ -1,7 +1,6 @@
 import { inject, injectable } from "inversify";
 import { TYPES } from "../config/types";
 import IChatService from "./interface/IChatService";
-import { Server as SocketIOServer } from "socket.io";
 import Response from "../dtos/Response";
 import ChatUserListDto, { ChatContactDto } from "../dtos/ChatDto";
 import IUserService from "./interface/IUserService";
@@ -11,6 +10,7 @@ import { CurrentUserDto, UserBasicDto } from "../dtos/UserDto";
 import { ChatAction } from "../enums/chat.action.enum";
 import UserModel from "../database/models/UserModel";
 import IMiscellaneousService from "./interface/IMiscellaneousService";
+import { SocketServer } from "../socket";
 
 @injectable()
 export default class ChatService implements IChatService {
@@ -20,7 +20,7 @@ export default class ChatService implements IChatService {
   private readonly currentUserId: number;
 
   constructor(
-    @inject(TYPES.SocketIO) private io: SocketIOServer,
+    @inject(TYPES.SocketServer) private io: SocketServer,
     @inject(TYPES.IUserService) userService: IUserService,
     @inject(TYPES.IMiscellaneousService) miscellaneousService: IMiscellaneousService
   ) {
