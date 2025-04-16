@@ -11,7 +11,6 @@ export interface MessageDto {
   message: string;
 }
 
-
 export interface ChatContactDto {
   id: number;
   userId: number;
@@ -25,4 +24,10 @@ export interface ChatContactDto {
   updatedBy?: string;
   isActive: boolean;
   isDeleted: boolean;
+}
+
+export interface ChatExistDto {
+  chatId: number;
+  chatCurrentUserId: number;
+  chatPassedUserId: number;
 }

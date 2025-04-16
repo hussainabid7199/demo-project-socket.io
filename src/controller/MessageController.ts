@@ -13,16 +13,16 @@ import { TYPES } from "../config/types";
 import IChatService from "../services/interface/IChatService";
 import ChatDto from "../dtos/ChatDto";
 import { authentication } from "../middleware/authentication.middleware";
-import sequelize from "../database/connection";
 import IUserService from "../services/interface/IUserService";
-import ChatUserListDto from "../dtos/ChatDto";
 import IMiscellaneousService from "../services/interface/IMiscellaneousService";
 import { CurrentUserDto } from "../dtos/UserDto";
+import IMessageService from "../services/interface/IMessageService";
 
-@controller("/chat")
-export class ChatController implements interfaces.Controller {
+@controller("/message")
+export class MessageController implements interfaces.Controller {
   private readonly chatService: IChatService;
   private readonly userService: IUserService;
+  private readonly messageService: IMessageService;
   private readonly miscellaneousService: IMiscellaneousService;
   private readonly currentUser: CurrentUserDto;
   private readonly currentUserId: number;
@@ -31,74 +31,64 @@ export class ChatController implements interfaces.Controller {
   constructor(
     @inject(TYPES.IChatService) chatService: IChatService,
     @inject(TYPES.IUserService) userService: IUserService,
+    @inject(TYPES.IMessageService) messageService: IMessageService,
     @inject(TYPES.IMiscellaneousService)
     miscellaneousService: IMiscellaneousService
   ) {
     this.chatService = chatService;
     this.userService = userService;
+    this.messageService = messageService;
     this.miscellaneousService = miscellaneousService;
     this.currentUser = this.miscellaneousService.currentUser();
     this.currentUserId = this.currentUser.id;
     this.currentUserGuid = this.currentUser.guid;
   }
 
-  @httpGet("/contact", authentication)
-  public async contact(
-    @request() req: Request,
-    @response() res: Response
-  ): Promise<Response<ChatUserListDto | void>> {
-    try {
-      const userExist = await this.userService.getByGuid(this.currentUserId, this.currentUserGuid);
-
-      if (!userExist) {
-        return res
-          .status(400)
-          .json({ success: false, message: "User does not exist" });
-      }
-
-      const response = await this.chatService.getChatContact();
-
-      if (response && response.data && response.success) {
-        return res.status(200).json(response);
-      } else {
-        return res.status(400).json(response);
-      }
-    } catch (error) {
-      console.error("Error while fetching contact:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Internal server error",
-        error: "Internal server error",
-      });
-    }
-  }
-
-  @httpPost("/create", authentication)
-  public async createChat(
+  @httpPost("/send", authentication)
+  public async send(
     @request() req: Request,
     @response() res: Response
   ): Promise<Response<ChatDto | void>> {
-    const t = await sequelize.transaction();
     try {
-      const { userId } = req.body;
+      const { userId, message } = req.body;
 
-      if (!userId || !this.currentUserId) {
+      if (!userId || !message || !this.currentUserId) {
         return res
           .status(400)
           .json({ success: false, message: "Invalid request payload" });
       }
 
-      const response = await this.chatService.createChat(userId);
+      const chatExistResponse = await this.chatService.chatExist(userId);
+
+      if (chatExistResponse && chatExistResponse.status != 200) {
+        return res.status(400).json({
+          success: false,
+          message: "Chat don't exist, please create a new chat.",
+        });
+      }
+
+      const chatId: number = chatExistResponse.data?.chatId || 0;
+      let receiverId: number = 0;
+      if (chatExistResponse.data?.chatCurrentUserId != this.currentUserId) {
+        receiverId = chatExistResponse.data?.chatCurrentUserId || 0;
+      }
+
+      if (chatExistResponse.data?.chatPassedUserId != this.currentUserId) {
+        receiverId = chatExistResponse.data?.chatPassedUserId || 0;
+      }
+
+      const response = await this.messageService.sendMessage(
+        chatId,
+        receiverId,
+        message
+      );
 
       if (response && response.data && response.success) {
-        await t.commit();
         return res.status(200).json(response);
       } else {
-        await t.rollback();
         return res.status(400).json(response);
       }
     } catch (error) {
-      await t.rollback();
       console.error("Error while creating chat:", error);
       return res.status(500).json({
         success: false,
@@ -108,37 +98,29 @@ export class ChatController implements interfaces.Controller {
     }
   }
 
-  @httpPost("/action", authentication)
-  public async chatAction(
+  @httpGet("/:userId", authentication)
+  public async messages(
     @request() req: Request,
     @response() res: Response
   ): Promise<Response<ChatDto | void>> {
-    const t = await sequelize.transaction();
     try {
-      const { userId, currentUserId, action } = req.body;
+      const userId = +req.params.userId;
 
-      if (!userId || !currentUserId) {
+      if (!userId || !this.currentUserId) {
         return res
           .status(400)
           .json({ success: false, message: "Invalid request payload" });
       }
 
-      const response = await this.chatService.chatAction(
-        userId,
-        currentUserId,
-        action
-      );
+      const response = await this.messageService.getAllMessages(userId);
 
       if (response && response.data && response.success) {
-        await t.commit();
         return res.status(200).json(response);
       } else {
-        await t.rollback();
         return res.status(400).json(response);
       }
     } catch (error) {
-      await t.rollback();
-      console.error("Error:", error);
+      console.error("Error while fetching the messages:", error);
       return res.status(500).json({
         success: false,
         message: "Internal server error",

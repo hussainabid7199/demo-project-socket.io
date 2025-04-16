@@ -2,17 +2,32 @@ import { inject, injectable } from "inversify";
 import { TYPES } from "../config/types";
 import Response from "../dtos/Response";
 import IUserService from "./interface/IUserService";
-import { UserBasicDto } from "../dtos/UserDto";
+import { CurrentUserDto, UserBasicDto } from "../dtos/UserDto";
 import UserModel from "../database/models/UserModel";
 import CustomError from "../exceptions/custom-error";
 import { SocketServer } from "../socket";
+import IMiscellaneousService from "./interface/IMiscellaneousService";
 
 @injectable()
 export default class UserService implements IUserService {
-  constructor(@inject(TYPES.SocketServer) private io: SocketServer) {}
+  private readonly miscellaneousService: IMiscellaneousService;
+  private readonly currentUser: CurrentUserDto;
+  private readonly currentUserGuid: string;
+  private readonly currentUserId: number;
+  constructor(
+    @inject(TYPES.SocketServer) private io: SocketServer,
+    @inject(TYPES.IMiscellaneousService)
+    miscellaneousService: IMiscellaneousService,
+  )
+     {
+      this.miscellaneousService = miscellaneousService;
+      this.currentUser = this.miscellaneousService.currentUser();
+      this.currentUserGuid = this.currentUser.guid;
+      this.currentUserId = this.currentUser.id;
+     }
 
   async get(): Promise<Response<UserBasicDto[]>> {
-    const users = await UserModel.findAll({
+    const users = (await UserModel.findAll({
       where: { isActive: true, isDeleted: false },
       attributes: [
         "id",
@@ -24,7 +39,7 @@ export default class UserService implements IUserService {
         "isActive",
         "isDeleted",
       ],
-    });
+    })).filter((e)=> e.dataValues.guid != this.currentUserGuid);
 
     const response: UserBasicDto[] = users.map((x) => {
       const user: UserBasicDto = x.dataValues;
@@ -43,12 +58,14 @@ export default class UserService implements IUserService {
     if (response) {
       return {
         success: true,
+        status: 200,
         data: response,
       };
     } else {
       return {
         success: false,
-        message: "Message failed",
+        status: 400,
+        message: "User not found",
         data: [],
       };
     }
