@@ -16,6 +16,6 @@
     "emitDecoratorMetadata": true,
     "lib": ["ESNext"]
   },
-  "include": ["./src", "./src/types/express.d.ts"],
+  "include": ["./src", "./src/types/express.d.ts", "src/database/models/MessageReactionModel.ts"],
   "exclude": ["node_modules", "dist"]
 }

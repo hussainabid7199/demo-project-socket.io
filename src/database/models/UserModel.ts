@@ -7,15 +7,11 @@ class UserModel extends Model {}
 UserModel.init(
   {
     id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true,
-      allowNull: false,
-    },
-    guid: {
       type: DataTypes.UUID,
-      allowNull: false,
       defaultValue: DataTypes.UUIDV4,
+      allowNull: false,
+      primaryKey: true,
+      unique: true
     },
     firstName: {
       type: DataTypes.STRING(50),

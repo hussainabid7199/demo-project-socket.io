@@ -1,39 +1,39 @@
-"use strict";
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../connection";
-import GroupModel from "./GroupModel";
+import MessageModel from "./MessageModel";
 import UserModel from "./UserModel";
 
-class GroupMemberModel extends Model {}
+class MessageReactionModel extends Model {}
 
-GroupMemberModel.init(
+MessageReactionModel.init(
   {
     id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false,
       primaryKey: true,
-      allowNull: false,
+      unique: true,
     },
-    groupId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    memberId: {
+    messageId: {
       type: DataTypes.UUID,
       allowNull: false,
     },
-    isAdmin: {
-      type: DataTypes.BOOLEAN,
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    emoji: {
+      type: DataTypes.STRING(255),
       allowNull: false,
     },
     createdAt: {
       type: DataTypes.DATE(7),
-      allowNull: false,
       defaultValue: DataTypes.NOW,
+      allowNull: false,
     },
     createdBy: {
       type: DataTypes.STRING(255),
-      allowNull: false,
+      allowNull: true,
     },
     updatedAt: {
       type: DataTypes.DATE(7),
@@ -45,31 +45,30 @@ GroupMemberModel.init(
     },
     isActive: {
       type: DataTypes.BOOLEAN,
-      allowNull: false,
       defaultValue: true,
+      allowNull: false,
     },
     isDeleted: {
       type: DataTypes.BOOLEAN,
-      allowNull: true,
       defaultValue: false,
+      allowNull: true,
     },
   },
   {
     sequelize,
-    tableName: "group_members",
-    modelName: "GroupMemberModel",
-    timestamps: false,
+    modelName: "MessageReactionModel",
+    tableName: "message_reactions",
   }
 );
 
-GroupMemberModel.belongsTo(GroupModel, {
-  foreignKey: "groupId",
-  as: "groups",
+MessageReactionModel.belongsTo(MessageModel, {
+  foreignKey: "messageId",
+  as: "messages",
 });
 
-GroupMemberModel.belongsTo(UserModel, {
-  foreignKey: "memberId",
+MessageReactionModel.belongsTo(UserModel, {
+  foreignKey: "userId",
   as: "users",
 });
 
-export default GroupMemberModel;
+export default MessageReactionModel;

@@ -1,34 +1,38 @@
-"use strict";
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../connection";
-import UserModel from "./UserModel";
+import MessageModel from "./MessageModel";
 
-class GroupModel extends Model {}
+class MessageEditModel extends Model {}
 
-GroupModel.init(
+MessageEditModel.init(
   {
     id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       allowNull: false,
+      primaryKey: true,
+      unique: true,
     },
-    adminId: {
+    messageId: {
       type: DataTypes.UUID,
       allowNull: false,
     },
-    name: {
-      type: DataTypes.STRING(255),
+    oldMessage: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    newMessage: {
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     createdAt: {
       type: DataTypes.DATE(7),
-      allowNull: false,
       defaultValue: DataTypes.NOW,
+      allowNull: false,
     },
     createdBy: {
       type: DataTypes.STRING(255),
-      allowNull: false,
+      allowNull: true,
     },
     updatedAt: {
       type: DataTypes.DATE(7),
@@ -40,26 +44,26 @@ GroupModel.init(
     },
     isActive: {
       type: DataTypes.BOOLEAN,
-      allowNull: false,
       defaultValue: true,
+      allowNull: false,
     },
     isDeleted: {
       type: DataTypes.BOOLEAN,
-      allowNull: true,
       defaultValue: false,
+      allowNull: true,
     },
   },
   {
     sequelize,
-    tableName: "groups",
-    modelName: "GroupModel",
-    timestamps: false,
+    modelName: "MessageEditModel",
+    tableName: "message_edits",
   }
 );
 
-GroupModel.belongsTo(UserModel, {
-  foreignKey: "adminId",
-  as: "users",
+// 🧩 Associations
+MessageEditModel.belongsTo(MessageModel, {
+  foreignKey: "messageId",
+  as: "message",
 });
 
-export default GroupModel;
+export default MessageEditModel;

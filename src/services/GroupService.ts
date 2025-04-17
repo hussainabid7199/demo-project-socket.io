@@ -5,7 +5,7 @@ import Response from "../dtos/Response";
 import IGroupService from "./interface/IGroupService";
 import UserModel from "../database/models/UserModel";
 import CustomError from "../exceptions/custom-error";
-import GroupModel from "../database/models/GroupModel";
+import GroupModel from "../database/models/";
 import { GroupDataModel, GroupMemberDataModel } from "../models/GroupDataModel";
 import {
   GroupBasicDto,
@@ -15,7 +15,7 @@ import {
   GroupMemberDto,
   GroupMemberListDto,
 } from "../dtos/GroupDto";
-import GroupMemberModel from "../database/models/GroupMemberModel";
+import GroupMemberModel from "../database/models/MessageEditModel";
 import UnauthorizedError from "../exceptions/unauthorized-error";
 import IMiscellaneousService from "./interface/IMiscellaneousService";
 import { CurrentUserDto, UserBasicDto } from "../dtos/UserDto";

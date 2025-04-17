@@ -1,35 +1,33 @@
-"use strict";
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../connection";
-import ChatContactModel from "./ChatContactModel";
+import ChatModel from "./ChatModel";
+import UserModel from "./UserModel";
 
 class MessageModel extends Model {}
+
 MessageModel.init(
   {
     id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false,
       primaryKey: true,
+      unique: true,
+    },
+    chatId: {
+      type: DataTypes.UUID,
       allowNull: false,
     },
-    chatContactId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-    groupId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-    groupMemberId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-    currentUserId: {
-      type: DataTypes.INTEGER,
+    senderId: {
+      type: DataTypes.UUID,
       allowNull: false,
     },
     message: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    messageType: {
+      type: DataTypes.ENUM("TEXT", "IMAGE", "VIDEO", "AUDIO", "FILE"),
       allowNull: false,
     },
     createdAt: {
@@ -64,13 +62,17 @@ MessageModel.init(
     sequelize,
     tableName: "messages",
     modelName: "MessageModel",
-    timestamps: false,
   }
 );
 
-MessageModel.belongsTo(ChatContactModel, {
-  foreignKey: "chatContactId",
-  as: "chat_contacts",
+MessageModel.belongsTo(ChatModel, {
+  foreignKey: "chatId",
+  as: "chats",
+});
+
+MessageModel.belongsTo(UserModel, {
+  foreignKey: "senderId",
+  as: "users",
 });
 
 export default MessageModel;
