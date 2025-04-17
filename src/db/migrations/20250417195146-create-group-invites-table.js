@@ -5,45 +5,49 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     try {
-      await queryInterface.createTable('group_members', {
+      await queryInterface.createTable('group_invites', {
         id: {
-          type: Sequelize.INTEGER,
+          type: Sequelize.UUID,
+          defaultValue: Sequelize.UUIDV4,
           allowNull: false,
-          autoIncrement: true,
-          primaryKey: true
+          primaryKey: true,
+          unique: true
         },
-        groupId: {
-          type: Sequelize.INTEGER,
+        chatId: {
+          type: Sequelize.UUID,
           allowNull: false,
           references: {
-            model: 'groups',
+            model: 'chats',
             key: 'id',
           },
         },
-        memberId: {
+        invitedUserId: {
           type: Sequelize.UUID,
           allowNull: false,
           references: {
             model: 'users',
-            key: 'guid',
-          },
+            key: 'id',
+          }
         },
-        isAdmin: {
-          type: Sequelize.BOOLEAN,
+        invitedBy: {
+          type: Sequelize.UUID,
+          allowNull: false
+        },
+        status: {
+          type: Sequelize.ENUM('PENDING', 'ACCEPTED', 'DECLINED'),
           allowNull: false,
-          defaultValue: false,
         },
         createdAt: {
-          type: Sequelize.DataTypes.DATE(7),
+          type: Sequelize.DATE(7),
           defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
           allowNull: false,
         },
         createdBy: {
           type: Sequelize.STRING(255),
-          allowNull: false
+          allowNull: true
         },
         updatedAt: {
-          type: Sequelize.DataTypes.DATE(7),
+          type: Sequelize.DATE(7),
           allowNull: true,
         },
         updatedBy: {
@@ -59,7 +63,7 @@ module.exports = {
           type: Sequelize.BOOLEAN,
           allowNull: true,
           defaultValue: false,
-        }
+        },
       });
     } catch (error) {
       console.log("Migration error", error);
@@ -68,11 +72,9 @@ module.exports = {
 
   async down(queryInterface) {
     try {
-      await queryInterface.dropTable('group_members');
+      await queryInterface.dropTable('group_invites');
     } catch (error) {
       console.log("Migration error", error);
     }
-
   }
 };
-

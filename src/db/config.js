@@ -13,7 +13,7 @@ module.exports = {
     dialect: "mssql",
     dialectOptions: {
       options: {
-        // instanceName: 'SQLEXPRESS',
+        instanceName: 'SQLEXPRESS',
         encrypt: false,
         trustServerCertificate: true,
       },

@@ -5,50 +5,33 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     try {
-      await queryInterface.createTable('users', {
+      await queryInterface.createTable('message_reactions', {
         id: {
-          type: Sequelize.INTEGER,
+          type: Sequelize.UUID,
+          defaultValue: Sequelize.UUIDV4,
           allowNull: false,
           primaryKey: true,
-          autoIncrement: true
-        },
-        guid: {
-          type: Sequelize.UUID,
-          allowNull: false,
-          defaultValue: Sequelize.UUIDV4,
           unique: true
         },
-        firstName: {
-          type: Sequelize.STRING(50),
+        messageId: {
+          type: Sequelize.UUID,
           allowNull: false,
+          references: {
+            model: 'messages',
+            key: 'id',
+          },
         },
-        lastName: {
-          type: Sequelize.STRING(50),
+        userId: {
+          type: Sequelize.UUID,
           allowNull: false,
+          references: {
+            model: 'users',
+            key: 'id',
+          },
         },
-        email: {
+        emoji: {
           type: Sequelize.STRING(255),
-          allowNull: false,
-        },
-        password: {
-          type: Sequelize.STRING(255),
-          allowNull: false,
-        },
-        profilePicture: {
-          type: Sequelize.BLOB,
-          allowNull: true
-        },
-        ip_address: {
-          type: Sequelize.STRING(250),
-          allowNull: true
-        },
-        login_on: {
-          type: Sequelize.DATE(7),
-          allowNull: true
-        },
-        lastLoginOn: {
-          type: Sequelize.DATE(7),
-          allowNull: true
+          allowNull: false
         },
         createdAt: {
           type: Sequelize.DATE(7),
@@ -85,7 +68,7 @@ module.exports = {
 
   async down(queryInterface) {
     try {
-      await queryInterface.dropTable('users');
+      await queryInterface.dropTable('message_reactions');
     } catch (error) {
       console.log("Migration error", error);
     }

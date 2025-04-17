@@ -5,23 +5,28 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     try {
-      await queryInterface.createTable('groups', {
+      await queryInterface.createTable('message_edits', {
         id: {
-          type: Sequelize.INTEGER,
+          type: Sequelize.UUID,
+          defaultValue: Sequelize.UUIDV4,
           allowNull: false,
-          autoIncrement: true,
-          primaryKey: true
+          primaryKey: true,
+          unique: true
         },
-        adminId: {
+        messageId: {
           type: Sequelize.UUID,
           allowNull: false,
           references: {
-            model: 'users',
-            key: 'guid',
+            model: 'messages',
+            key: 'id',
           },
         },
-        name: {
-          type: Sequelize.STRING(50),
+        oldMessage: {
+          type: Sequelize.TEXT(),
+          allowNull: false,
+        },
+        newMessage: {
+          type: Sequelize.TEXT(),
           allowNull: false,
         },
         createdAt: {
@@ -59,10 +64,9 @@ module.exports = {
 
   async down(queryInterface) {
     try {
-      await queryInterface.dropTable('groups');
+      await queryInterface.dropTable('message_edits');
     } catch (error) {
       console.log("Migration error", error);
     }
   }
 };
-
