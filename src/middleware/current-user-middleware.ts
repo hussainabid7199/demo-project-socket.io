@@ -9,7 +9,7 @@ const CurrentUserContext = (
   res: Response,
   next: NextFunction
 ) => {
-  const token = <string>req.headers["authorization"];
+  const token = <string>req.headers["authorization"]?.split(" ")[1];
   if (token) {
     const jwt = jwtPayload(req, token);
     const currentUser = jwt.payload as CurrentUserDto;

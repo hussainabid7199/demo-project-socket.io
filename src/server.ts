@@ -91,15 +91,16 @@ export async function startServer(): Promise<void> {
 
   const server = inversifyServer.build();
   httpServer.on("request", server);
-
   const port = parseInt(process.env.PORT || "3001", 10);
   httpServer.listen(port, async () => {
     try {
       await sequelize.authenticate();
+      const processMemoryStats = process.memoryUsage();
       console.table({
         "Database Status": "✅ Connected successfully",
         "Worker Info": `🛠️ Worker PID ${process.pid}`,
         "Listening On": `🌐 http://localhost:${port}`,
+        "processMemoryStats": processMemoryStats
       });
     } catch (error) {
       console.error("Error during server startup:", error);

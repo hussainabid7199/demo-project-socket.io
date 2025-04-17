@@ -13,7 +13,7 @@ export const authentication = (
   res: Response,
   next: NextFunction
 ) => {
-  const token = <string>req.headers["authorization"];
+  const token = <string>req.headers["authorization"]?.split(" ")[1];
   try {
     const jwt = jwtPayload(req, token);
 

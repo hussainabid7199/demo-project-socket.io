@@ -4,7 +4,7 @@ import config from "../jwt/jwt-config";
 
 const jwtPayload = (req: Request, token:string) => {
   // Get the JWT from the request header.
-  const jwt_Payload = verify(token?.split(" ")[1], config.jwt.secret!, {
+  const jwt_Payload = verify(token, config.jwt.secret!, {
     complete: true,
     audience: config.jwt.audience,
     issuer: config.jwt.issuer,
