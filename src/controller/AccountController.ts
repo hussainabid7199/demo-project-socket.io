@@ -14,7 +14,11 @@ import IAccountService from "../services/interface/IAccountService";
 import LoginModel from "../models/LoginDataModel";
 import UserDto from "../dtos/UserDto";
 import sequelize from "../database/connection";
-import { UserModel } from "../database/models/UserModel";
+import { UserDataModel } from "../models/UserDataModel";
+import BcryptUtils from "../utils/bcrypt.utils";
+import UserModel from "../database/models/UserModel";
+import LoginSchema from "../schema/LoginSchema";
+import { validateSchema } from "../middleware/validation.middleware";
 
 @controller("/account")
 export class AccountController implements interfaces.Controller {
@@ -36,26 +40,41 @@ export class AccountController implements interfaces.Controller {
     });
   }
 
-  @httpPost("/login")
+  @httpPost("/login", validateSchema(LoginSchema))
   public async login(
     @request() req: Request,
-    @response() res: Response
-  ): Promise<void> {
+    @response() res: Response,
+  ): Promise<UserDto | void> {
     const model: LoginModel = req.body;
+    const t = await sequelize.transaction();
     try {
       const response = await this._accountService.login(model);
+      const client_ip = req.clientIp;
 
-      if (response && response.data) {
-        res.status(200).send({
-          success: true,
-          message: "Login successful!",
-          data: response.data,
+      if (response && response.success && response.data) {
+        const user = await UserModel.findOne({
+          where: { guid: response.data.guid },
         });
+
+        if (user && user.dataValues && client_ip) {
+          const loginOn = user?.dataValues.login_on;
+          (
+            await user.update({
+              ip_address: client_ip,  
+              login_on: new Date(),
+              lastLoginOn: loginOn,
+            })
+          ).save();
+        }
+        await t.commit();
+        res.status(200).send(response);
       }
     } catch (error) {
+      await t.rollback();
+      console.log(error);
       res.status(400).send({
-        message: "Try again!",
-        error: error,
+        message: "Invalid username or password",
+        error: "Invalid username or password",
       });
     }
   }
@@ -67,11 +86,30 @@ export class AccountController implements interfaces.Controller {
   ): Promise<UserDto | void> {
     const t = await sequelize.transaction();
     try {
-      const model = req.body as UserModel;
-      const roleName = req.body.role as string;
-      const confirmPassword = req.body.confirmPassword as string;
-      console.log(model, roleName, confirmPassword);
+      const model = req.body as UserDataModel;
+      const existingUser = await UserModel.findOne({
+        where: { email: model.email },
+      });
 
+      if (existingUser) {
+        res.status(400).json({
+          success: false,
+          message: "Username already taken",
+        });
+        return;
+      }
+
+      if (model.password !== model.confirmPassword) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid username or password",
+        });
+        return;
+      }
+
+      model.password = await BcryptUtils.hashPassword(model.password);
+      const { ...dbModel } = model;
+      const response = await UserModel.create(dbModel);
 
       await t.commit();
       res.status(201).json(response);

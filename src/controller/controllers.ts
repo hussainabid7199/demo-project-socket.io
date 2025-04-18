@@ -1,4 +1,6 @@
 "use-strict"
 import "./AccountController";
-import "./UserController";
 import "./ChatController";
+import "./UserController";
+import "./GroupController";
+import "./MessageController";

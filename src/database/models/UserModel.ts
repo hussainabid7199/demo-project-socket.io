@@ -1,99 +1,85 @@
 "use strict";
-import { DataTypes } from "sequelize";
-import {
-  Table,
-  Model,
-  Column,
-} from "sequelize-typescript";
+import { DataTypes, Model } from "sequelize";
+import sequelize from "../connection";
 
-@Table({
-  timestamps: false,
-  tableName: "users",
-})
-export class UserModel extends Model {
-  @Column({
-    type: DataTypes.UUID,
-    allowNull: false,
-    defaultValue: DataTypes.UUIDV4,
-  })
-  uniqueId!: string;
+class UserModel extends Model {}
 
-  @Column({
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-    allowNull: false,
-  })
-  userId!: number;
+UserModel.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false,
+      primaryKey: true,
+      unique: true
+    },
+    firstName: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+    },
+    lastName: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+    },
+    email: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    password: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    profilePicture: {
+      type: DataTypes.BLOB,
+      allowNull: true,
+    },
+    ip_address: {
+      type: DataTypes.STRING(250),
+      allowNull: true,
+    },
+    login_on: {
+      type: DataTypes.DATE(7),
+      allowNull: true,
+    },
+    lastLoginOn: {
+      type: DataTypes.DATE(7),
+      allowNull: true,
+    },
+    createdAt: {
+      type: DataTypes.DATE(7),
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    createdBy: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    updatedAt: {
+      type: DataTypes.DATE(7),
+      allowNull: true,
+    },
+    updatedBy: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    isDeleted: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false,
+    }
+  },
+  {
+    sequelize,
+    tableName: "users",
+    modelName: "UserModel",
+  }
+);
 
-  @Column({
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    defaultValue: 2,
-  })
-  roleId!: number;
 
-  @Column({
-    type: DataTypes.STRING(50),
-    allowNull: false,
-  })
-  firstName!: string;
 
-  @Column({
-    type: DataTypes.STRING(50),
-    allowNull: false,
-  })
-  lastName!: string;
-
-  @Column({
-    type: DataTypes.STRING(250),
-    allowNull: false,
-  })
-  email!: string;
-
-  @Column({
-    type: DataTypes.STRING,
-    allowNull: false,
-  })
-  password!: string;
-
-  @Column({
-    type: DataTypes.STRING(20),
-    allowNull: false,
-  })
-  phone!: string;
-
-  @Column({
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW,
-  })
-  createdOn!: Date;
-
-  @Column({
-    type: DataTypes.DATE,
-    allowNull: true,
-    defaultValue: DataTypes.NOW,
-  })
-  updatedOn?: Date;
-
-  @Column({
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: true,
-  })
-  isActive!: boolean;
-
-  @Column({
-    type: DataTypes.BOOLEAN,
-    allowNull: true,
-    defaultValue: false,
-  })
-  isDeleted!: boolean;
-
-  @Column({
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-  })
-  is2FA!: boolean;
-}
+export default UserModel

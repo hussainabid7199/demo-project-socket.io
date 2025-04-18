@@ -1,7 +1,9 @@
-import ChatDto from "../../dtos/ChatDto";
+import ChatUserListDto, { ChatContactDto, ChatExistDto } from "../../dtos/ChatDto";
 import Response from "../../dtos/Response";
 
 export default interface IChatService {
-  sendToSocket( userId: number, socketId: string, message: string): Promise<Response<ChatDto>>;
-  broadcastMessage(message: string): Promise<Response<ChatDto>>;
+  getChatContact(): Promise<Response<ChatUserListDto[]>>;
+  createChat(userId: number): Promise<Response<ChatContactDto>>;
+  chatAction(userId: number, currentUserId: number, action: string): Promise<Response<ChatContactDto>>;
+  chatExist(userId: number): Promise<Response<ChatExistDto>>;
 }

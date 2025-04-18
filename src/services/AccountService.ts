@@ -1,86 +1,99 @@
-import { inject, injectable } from "inversify";
+import { injectable } from "inversify";
 import IAccountService from "./interface/IAccountService";
-import UserDto from "../dtos/UserDto";
+import UserDto, { CurrentUserDto } from "../dtos/UserDto";
 import LoginDataModel from "../models/LoginDataModel";
-import BcryptUtils from "../utils/bcrypt.utils";
-import { UserModel } from "../database/models/UserModel";
-import sequelize from "../database/connection";
-import { RoleModel } from "../database/models/RoleModel";
+import UserModel from "../database/models/UserModel";
 import Response from "../dtos/Response";
-import IMiscellaneousService from "./interface/IMiscellaneousService";
-import { TYPES } from "../config/types";
+import BcryptUtils from "../utils/bcrypt.utils";
+import generateToken from "../jwt/jwt-token";
 
 @injectable()
 export default class AccountService implements IAccountService {
-  private readonly _miscellaneousService: IMiscellaneousService;
-
-  constructor(
-    @inject(TYPES.IMiscellaneousService)
-    miscellaneousService: IMiscellaneousService
-  ) {
-    this._miscellaneousService = miscellaneousService;
-  }
-
-  async login(
-    model: LoginDataModel
-  ): Promise<Response<UserDto | { uniqueId: string }>> {
-    const t = await sequelize.transaction();
+  async login(model: LoginDataModel): Promise<Response<UserDto>> {
     try {
       if (!model.username && !model.password) {
         throw new Error("Login credentials required");
       }
 
-      const _user = await UserModel.findOne({
+      const result = await UserModel.findOne({
         where: {
           email: model.username,
           isActive: true,
           isDeleted: false,
         },
-        raw: true,
+        attributes: [
+          "id",
+          "guid",
+          "email",
+          "firstName",
+          "lastName",
+          "profilePicture",
+          "password",
+          "isActive",
+          "isDeleted",
+        ],
+        raw: false,
       });
 
-      if (!_user) {
+      const userResponse = result?.dataValues;
+      if (!userResponse) {
         throw new Error("Invalid username or password");
       }
 
       const isPasswordValid = await BcryptUtils.comparePassword(
         model.password,
-        _user.password
+        userResponse.password
       );
 
       if (!isPasswordValid) {
         throw new Error("Invalid username or password");
       }
 
-      await t.rollback();
-      const roleResponse = await RoleModel.findOne({
-        where: {
-          roleId: _user?.roleId,
-        },
-        raw: true,
-      });
-
-      if (!roleResponse) {
-        throw new Error("Invalid role!");
+      const fullName = `${userResponse.firstName} ${userResponse.lastName}`;
+      const currentUser: CurrentUserDto = {
+        id: userResponse.id,
+        guid: userResponse.guid,
+        email: userResponse.email,
+        fullName: fullName
       }
 
-      const tokenResponse = await this._miscellaneousService.generateToken(
-        _user,
-        roleResponse
-      );
+      const token = await generateToken(currentUser);
 
-      if (tokenResponse && tokenResponse.data && tokenResponse.success) {
-        return tokenResponse;
+      if (!token) {
+        throw new Error("Some error occurred");
       }
-    } catch {
-      await t.rollback();
+
+      const usersData: UserDto = userResponse;
+
+      const response: UserDto = {
+        id: usersData.id,
+        guid: usersData.guid,
+        firstName: usersData.firstName,
+        lastName: usersData.lastName,
+        email: usersData.email,
+        profilePicture: usersData.profilePicture,
+        isActive: usersData.isActive,
+        isDeleted: usersData.isDeleted,
+        token: token,
+      };
+
+      if (response) {
+        return {
+          success: true,
+          status: 200,
+          message: "Login successful!",
+          data: response,
+        };
+      } else {
+        return {
+          success: false,
+          message: "Login failed",
+        };
+      }
+    } catch (e) {
+      console.log(e);
       throw new Error("Some error occurred!");
     }
-
-    return {
-      success: false,
-      message: "Unexpected error: operation did not complete",
-    };
   }
 
   register(model: UserModel): Promise<UserDto> {

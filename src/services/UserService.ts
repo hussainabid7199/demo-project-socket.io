@@ -1,52 +1,92 @@
-import { injectable } from "inversify";
-import IUserService from "./interface/IUserService";
-import UserDto from "../dtos/UserDto";
+import { inject, injectable } from "inversify";
+import { TYPES } from "../config/types";
 import Response from "../dtos/Response";
-import { UserModel } from "../database/models/UserModel";
+import IUserService from "./interface/IUserService";
+import { CurrentUserDto, UserBasicDto } from "../dtos/UserDto";
+import UserModel from "../database/models/UserModel";
+import CustomError from "../exceptions/custom-error";
+import { SocketServer } from "../socket";
+import IMiscellaneousService from "./interface/IMiscellaneousService";
 
 @injectable()
 export default class UserService implements IUserService {
-  async get(): Promise<Response<UserDto[]>> {
-    const response: UserDto[] = await UserModel.findAll({
+  private readonly miscellaneousService: IMiscellaneousService;
+  private readonly currentUser: CurrentUserDto;
+  private readonly currentUserGuid: string;
+  private readonly currentUserId: number;
+  constructor(
+    @inject(TYPES.SocketServer) private io: SocketServer,
+    @inject(TYPES.IMiscellaneousService)
+    miscellaneousService: IMiscellaneousService,
+  )
+     {
+      this.miscellaneousService = miscellaneousService;
+      this.currentUser = this.miscellaneousService.currentUser();
+      this.currentUserGuid = this.currentUser.guid;
+      this.currentUserId = this.currentUser.id;
+     }
+
+  async get(): Promise<Response<UserBasicDto[]>> {
+    const users = (await UserModel.findAll({
+      where: { isActive: true, isDeleted: false },
       attributes: [
-        "uniqueId",
+        "id",
+        "guid",
         "firstName",
         "lastName",
         "email",
-        "phone",
+        "profilePicture",
+        "isActive",
+        "isDeleted",
       ],
-      raw: true
+    })).filter((e)=> e.dataValues.guid != this.currentUserGuid);
+
+    const response: UserBasicDto[] = users.map((x) => {
+      const user: UserBasicDto = x.dataValues;
+      return {
+        id: user.id,
+        guid: user.guid,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        profilePicture: user.profilePicture,
+        isActive: user.isActive,
+        isDeleted: user.isDeleted,
+      };
     });
-    if (response && response.length > 0 && response) {
+
+    if (response) {
       return {
         success: true,
+        status: 200,
         data: response,
       };
     } else {
       return {
         success: false,
+        status: 400,
+        message: "User not found",
         data: [],
       };
     }
   }
 
- async getById(id: string): Promise<Response<UserDto>> {
-    const response = await UserModel.findOne({
-      where:{
-        id,
-        isActive: true,
-        isDeleted: false
-      },
+  async getById(id: number): Promise<Response<UserBasicDto>> {
+    const user = await UserModel.findOne({
+      where: { id: id, isActive: true, isDeleted: false },
       attributes: [
-        "userId",
-        "uniqueId",
+        "id",
+        "guid",
         "firstName",
         "lastName",
         "email",
-        "phone",
+        "profilePicture",
+        "isActive",
+        "isDeleted",
       ],
-      raw: true
     });
+
+    const response: UserBasicDto = user?.dataValues;
     if (response) {
       return {
         success: true,
@@ -55,7 +95,40 @@ export default class UserService implements IUserService {
     } else {
       return {
         success: false,
-        message: "User don't exist!"
+        message: "Message failed",
+      };
+    }
+  }
+
+  async getByGuid(id: number, guid: string): Promise<Response<UserBasicDto>> {
+    const user = await UserModel.findOne({
+      where: { id: id, guid: guid, isActive: true, isDeleted: false },
+      attributes: [
+        "id",
+        "guid",
+        "firstName",
+        "lastName",
+        "email",
+        "profilePicture",
+        "isActive",
+        "isDeleted",
+      ],
+      raw: true
+    }) as UserBasicDto | null;
+
+    if(!user)
+      if (!user) throw new CustomError("User not found!", 400);
+
+    const response: UserBasicDto = user;
+    if (response) {
+      return {
+        success: true,
+        data: response,
+      };
+    } else {
+      return {
+        success: false,
+        message: "Message failed",
       };
     }
   }
