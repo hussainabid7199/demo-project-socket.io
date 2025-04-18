@@ -14,6 +14,8 @@ export class SocketServer {
     io.on("connection", async (socket: Socket & { user?: CurrentUserDto }) => {
       try {
         const token: string = socket.handshake.auth?.token || "";
+        const roomId = socket.handshake.query?.roomId as string;
+        console.log("roomId", roomId);
 
         if (!token) {
           throw new CustomError(
@@ -67,6 +69,7 @@ export class SocketServer {
     if (!this.io) {
       throw new Error("Socket server not initialized.");
     }
+    
     this.io.in(roomId).emit(event, payload);
   }
 

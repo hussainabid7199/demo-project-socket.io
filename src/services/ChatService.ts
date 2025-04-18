@@ -12,6 +12,7 @@ import UserModel from "../database/models/UserModel";
 import IMiscellaneousService from "./interface/IMiscellaneousService";
 import { SocketServer } from "../socket";
 import { ChatEventEnum } from "../socket/constant";
+import { Op } from "sequelize";
 
 @injectable()
 export default class ChatService implements IChatService {
@@ -36,9 +37,12 @@ export default class ChatService implements IChatService {
 
   // Max response time 25ms Min response time 19ms
   async getChatContact(): Promise<Response<ChatUserListDto[]>> {
-    const result = await ChatContactModel.findAll({
+    const chats = await ChatContactModel.findAll({
       where: {
-        currentUserId: this.currentUserId,
+        [Op.or]: [
+          { currentUserId: this.currentUserId },
+          { userId: this.currentUserId },
+        ],
         isActive: true,
         isDeleted: false,
       },
@@ -51,14 +55,15 @@ export default class ChatService implements IChatService {
       ],
     });
 
-    const response: ChatUserListDto[] = result.map(
-      ({ dataValues: { user } }) => ({
-        id: user.id,
-        guid: user.guid,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      })
-    );
+    const seenIds = new Set<number>();
+    const response = chats.reduce<ChatUserListDto[]>((acc, x) => {
+      const user = x.dataValues.user.dataValues;
+      if (!seenIds.has(user.id)) {
+        seenIds.add(user.id);
+        acc.push(user);
+      }
+      return acc;
+    }, []);
 
     if (response) {
       return {
@@ -96,29 +101,17 @@ export default class ChatService implements IChatService {
     const user: UserBasicDto = existingUser;
     const currentUser: UserBasicDto = currentUserExist;
 
-    const [existingChatWithCurrentUser, existingChatWithPassedUser] =
-      await Promise.all([
-        await ChatContactModel.findOne({
-          where: {
-            userId: user.id,
-            currentUserId: currentUser.id,
-            isActive: true,
-            isDeleted: false,
-          },
-          raw: true,
-        }),
-        await ChatContactModel.findOne({
-          where: {
-            userId: currentUser.id,
-            currentUserId: user.id,
-            isActive: true,
-            isDeleted: false,
-          },
-          raw: true,
-        }),
-      ]);
+    const existingChatWithCurrentUser = await ChatContactModel.findOne({
+      where: {
+        userId: user.id,
+        currentUserId: currentUser.id,
+        isActive: true,
+        isDeleted: false,
+      },
+      raw: true,
+    });
 
-    if (existingChatWithCurrentUser || existingChatWithPassedUser) {
+    if (existingChatWithCurrentUser) {
       return {
         success: false,
         status: 400,
