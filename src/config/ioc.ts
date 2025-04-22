@@ -4,11 +4,13 @@ import { TYPES } from "./types";
 import IUserService from "../services/interface/IUserService";
 import IAccountService from "../services/interface/IAccountService";
 import IMiscellaneousService from "../services/interface/IMiscellaneousService";
+import IChatService from "../services/interface/IChatService";
 
 import { SocketServer } from "../socket";
 import UserService from "../services/UserService";
 import AccountService from "../services/AccountService";
 import MiscellaneousService from "../services/MiscellaneousService";
+import ChatService from "../services/ChatService";
 
 export function createContainer(io: SocketServer): Container {
   const container = new Container();
@@ -19,7 +21,7 @@ export function createContainer(io: SocketServer): Container {
   container
     .bind<IMiscellaneousService>(TYPES.IMiscellaneousService)
     .to(MiscellaneousService);
-  // container.bind<IChatService>(TYPES.IChatService).to(ChatService);
+  container.bind<IChatService>(TYPES.IChatService).to(ChatService);
   // container.bind<IGroupService>(TYPES.IGroupService).to(GroupService);
   // container.bind<IMessageService>(TYPES.IMessageService).to(MessageService);
 

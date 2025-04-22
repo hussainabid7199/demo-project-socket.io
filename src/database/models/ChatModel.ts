@@ -19,6 +19,14 @@ ChatModel.init(
       type: DataTypes.ENUM("P", "G"),
       allowNull: true,
     },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    description: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
     avatarUrl: {
       type: DataTypes.TEXT,
       allowNull: true,

@@ -20,6 +20,14 @@ module.exports = {
           type: Sequelize.ENUM('P', 'G'),
           allowNull: true,
         },
+        name: {
+          type: Sequelize.STRING,
+          allowNull: true,
+        },
+        description: {
+          type: Sequelize.STRING(500),
+          allowNull: true
+        },
         avatarUrl: {
           type: Sequelize.TEXT(),
           allowNull: true,

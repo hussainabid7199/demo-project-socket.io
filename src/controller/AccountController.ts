@@ -114,7 +114,7 @@ export class AccountController implements interfaces.Controller {
       const { ...dbModel } = model;
       const result = await UserModel.create({
         ...dbModel,
-        profilePicturePath: profilePicture?.path ?? null
+        profilePicturePath: profilePicture?.path.toString() ?? null
       });
 
       const fullName = `${result.dataValues.firstName} ${result.dataValues.lastName}`;

@@ -1,9 +1,8 @@
-import ChatUserListDto, { ChatContactDto, ChatExistDto } from "../../dtos/ChatDto";
+import ChatDto from "../../dtos/ChatDto";
 import Response from "../../dtos/Response";
 
 export default interface IChatService {
-  getChatContact(): Promise<Response<ChatUserListDto[]>>;
-  createChat(userId: number): Promise<Response<ChatContactDto>>;
-  chatAction(userId: number, currentUserId: number, action: string): Promise<Response<ChatContactDto>>;
-  chatExist(userId: number): Promise<Response<ChatExistDto>>;
+  oneToOneChat(userId: number): Promise<Response<ChatDto>>;
+  groupChat(name: string, description: string, participant: number[]): Promise<Response<ChatDto>>;
+  chatAction(type: string, chatId: number, userId: number, action: string): Promise<Response<ChatDto>>;
 }

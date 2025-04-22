@@ -1,11 +1,24 @@
 export interface ChatContactDataModel {
-    userId: number;
-    currentUserId: number;
-    isMuted: boolean;
-    isArchived: boolean;
-    isBlocked: boolean;
-    createdBy: string;
-    isActive?: boolean;
-    isDeleted?: boolean;
-  }
+    roomId: string;
+    type: string;
+    name?: string;
+    description?: string;
+    avatarUrl?: string;
+    createdBy?: string;
+    updatedBy?: string;
+}
   
+export interface ChatParticipantDataModel{
+  chatId: number,
+  userId: number,
+  isAdmin?: boolean,
+  isMuted?: boolean,
+  isArchived?: boolean,
+  isBlocked?: boolean,
+  blockedBy?: string,
+  createdBy?: string,
+  updatedBy?: string,
+  isActive?: boolean,
+  isDeleted?: boolean
+}
+
