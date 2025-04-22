@@ -5,61 +5,69 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     try {
-      await queryInterface.createTable('messages', {
+      await queryInterface.createTable('chat_participants', {
         id: {
           type: Sequelize.INTEGER,
           allowNull: false,
-          autoIncrement: true,
           primaryKey: true,
+          autoIncrement: true
         },
-        chatContactId: {
+        chatId: {
           type: Sequelize.INTEGER,
-          allowNull: true,
+          allowNull: false,
           references: {
-            model: 'chat_contacts',
+            model: 'chats',
             key: 'id',
           },
         },
-        groupId: {
+        userId: {
           type: Sequelize.INTEGER,
-          allowNull: true,
+          allowNull: false,
           references: {
-            model: 'groups',
+            model: 'users',
             key: 'id',
           },
         },
-        groupMemberId: {
-          type: Sequelize.INTEGER,
-          allowNull: true,
-          references: {
-            model: 'group_members',
-            key: 'id',
-          }
-        },
-        currentUserId: {
-          type: Sequelize.INTEGER,
-          allowNull: true,
-        },
-        message: {
-          type: Sequelize.STRING(50),
+        isAdmin: {
+          type: Sequelize.BOOLEAN,
+          defaultValue: false,
           allowNull: false,
         },
+        isMuted: {
+          type: Sequelize.BOOLEAN,
+          defaultValue: false,
+          allowNull: false,
+        },
+        isArchived: {
+          type: Sequelize.BOOLEAN,
+          defaultValue: false,
+          allowNull: false,
+        },
+        isBlocked: {
+          type: Sequelize.BOOLEAN,
+          defaultValue: false,
+          allowNull: false,
+        },
+        blockedBy: {
+          type: Sequelize.INTEGER,
+          allowNull: true,
+        },
         createdAt: {
-          type: Sequelize.DataTypes.DATE(7),
+          type: Sequelize.DATE(7),
           defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
           allowNull: false,
         },
         createdBy: {
           type: Sequelize.STRING(255),
-          allowNull: false,
+          allowNull: true
         },
         updatedAt: {
-          type: Sequelize.DataTypes.DATE(7),
+          type: Sequelize.DATE(7),
           allowNull: true,
         },
         updatedBy: {
           type: Sequelize.STRING(255),
-          allowNull: true,
+          allowNull: true
         },
         isActive: {
           type: Sequelize.BOOLEAN,
@@ -79,10 +87,9 @@ module.exports = {
 
   async down(queryInterface) {
     try {
-      await queryInterface.dropTable('messages');
+      await queryInterface.dropTable('chat_participants');
     } catch (error) {
       console.log("Migration error", error);
     }
-  },
+  }
 };
-

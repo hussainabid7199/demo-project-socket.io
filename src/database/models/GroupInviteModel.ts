@@ -1,49 +1,42 @@
-"use strict";
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../connection";
+import ChatModel from "./ChatModel";
 import UserModel from "./UserModel";
 
-class ChatContactModel extends Model {}
+class GroupInviteModel extends Model {}
 
-ChatContactModel.init(
+GroupInviteModel.init(
   {
     id: {
       type: DataTypes.INTEGER,
-      autoIncrement: true,
+      allowNull: false,
       primaryKey: true,
-      allowNull: false,
+      autoIncrement: true
     },
-    userId: {
+    chatId: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    currentUserId: {
+    invitedUserId: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    isMuted: {
-      type: DataTypes.BOOLEAN,
+    invitedBy: {
+      type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: false,
     },
-    isArchived: {
-      type: DataTypes.BOOLEAN,
+    status: {
+      type: DataTypes.ENUM("PENDING", "ACCEPTED", "DECLINED"),
       allowNull: false,
-      defaultValue: false,
-    },
-    isBlocked: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
     },
     createdAt: {
       type: DataTypes.DATE(7),
-      allowNull: false,
       defaultValue: DataTypes.NOW,
+      allowNull: false,
     },
     createdBy: {
       type: DataTypes.STRING(255),
-      allowNull: false,
+      allowNull: true,
     },
     updatedAt: {
       type: DataTypes.DATE(7),
@@ -66,15 +59,17 @@ ChatContactModel.init(
   },
   {
     sequelize,
-    tableName: "chat_contacts",
-    modelName: "ChatContactModel",
-    timestamps: false,
+    modelName: "GroupInviteModel",
+    tableName: "group_invites",
   }
 );
 
-ChatContactModel.belongsTo(UserModel, {
-  foreignKey: 'userId',
-  as: 'user'
+GroupInviteModel.belongsTo(ChatModel, {
+  foreignKey: "chatId",
+  as: "chats",
 });
 
-export default ChatContactModel;
+GroupInviteModel.belongsTo(UserModel, {
+  foreignKey: "invitedUserId",
+  as: "users",
+});

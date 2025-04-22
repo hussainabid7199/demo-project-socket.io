@@ -5,13 +5,13 @@
 module.exports = {
    async up(queryInterface, Sequelize) {
     try {
-      await queryInterface.createTable('last_seen_records', 
+      await queryInterface.createTable('last_seen_ons', 
         { 
           id: {
             type: Sequelize.INTEGER,
             allowNull: false,
-            autoIncrement: true,
-            primaryKey: true
+            primaryKey: true,
+            autoIncrement: true
           },
           userId: {
             type: Sequelize.INTEGER,
@@ -20,10 +20,6 @@ module.exports = {
               model: 'users',
               key: 'id',
             },
-          },
-          status: {
-            type: Sequelize.STRING(50),
-            allowNull: false,
           },
           lastSeenOn: {
             type: Sequelize.DataTypes.DATE(7),
@@ -48,7 +44,7 @@ module.exports = {
 
   async down(queryInterface) {
     try {
-      await queryInterface.dropTable('last_seen_records');
+      await queryInterface.dropTable('last_seen_ons');
     } catch (error) {
       console.log("Migration error", error);
     }

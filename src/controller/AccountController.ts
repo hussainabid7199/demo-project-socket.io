@@ -12,13 +12,14 @@ import {
 import { TYPES } from "../config/types";
 import IAccountService from "../services/interface/IAccountService";
 import LoginModel from "../models/LoginDataModel";
-import UserDto from "../dtos/UserDto";
+import UserDto, { CurrentUserDto } from "../dtos/UserDto";
 import sequelize from "../database/connection";
 import { UserDataModel } from "../models/UserDataModel";
 import BcryptUtils from "../utils/bcrypt.utils";
 import UserModel from "../database/models/UserModel";
 import LoginSchema from "../schema/LoginSchema";
 import { validateSchema } from "../middleware/validation.middleware";
+import pictureUpload from "../utils/multer/picture-upload.utils";
 
 @controller("/account")
 export class AccountController implements interfaces.Controller {
@@ -79,14 +80,16 @@ export class AccountController implements interfaces.Controller {
     }
   }
 
-  @httpPost("/register")
+  @httpPost("/register", pictureUpload)
   public async register(
     @request() req: Request,
     @response() res: Response
-  ): Promise<UserDto | void> {
+  ): Promise<CurrentUserDto | void> {
     const t = await sequelize.transaction();
     try {
       const model = req.body as UserDataModel;
+      const files = req.files as Express.Multer.File[];
+      const profilePicture = files?.find((f) => f.fieldname === "profilePicture");
       const existingUser = await UserModel.findOne({
         where: { email: model.email },
       });
@@ -109,7 +112,18 @@ export class AccountController implements interfaces.Controller {
 
       model.password = await BcryptUtils.hashPassword(model.password);
       const { ...dbModel } = model;
-      const response = await UserModel.create(dbModel);
+      const result = await UserModel.create({
+        ...dbModel,
+        profilePicturePath: profilePicture?.path ?? null
+      });
+
+      const fullName = `${result.dataValues.firstName} ${result.dataValues.lastName}`;
+      const response: CurrentUserDto = {
+        id: result.dataValues.id,
+        guid: result.dataValues.guid,
+        email: result.dataValues.email,
+        fullName: fullName
+      }
 
       await t.commit();
       res.status(201).json(response);

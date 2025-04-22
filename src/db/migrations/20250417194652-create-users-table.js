@@ -14,8 +14,8 @@ module.exports = {
         },
         guid: {
           type: Sequelize.UUID,
-          allowNull: false,
           defaultValue: Sequelize.UUIDV4,
+          allowNull: false,
           unique: true
         },
         firstName: {
@@ -35,7 +35,7 @@ module.exports = {
           allowNull: false,
         },
         profilePicture: {
-          type: Sequelize.BLOB,
+          type: Sequelize.STRING,
           allowNull: true
         },
         ip_address: {

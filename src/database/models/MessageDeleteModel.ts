@@ -1,10 +1,11 @@
-"use strict";
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../connection";
+import MessageModel from "./MessageModel";
+import UserModel from "./UserModel";
 
-class UserModel extends Model {}
+class MessageDeleteModel extends Model {}
 
-UserModel.init(
+MessageDeleteModel.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -12,48 +13,18 @@ UserModel.init(
       primaryKey: true,
       autoIncrement: true
     },
-    guid: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      allowNull: false,
-      unique: true
-    },
-    firstName: {
-      type: DataTypes.STRING(50),
+    messageId: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
-    lastName: {
-      type: DataTypes.STRING(50),
-      allowNull: false,
-    },
-    email: {
+    deletedBy: {
       type: DataTypes.STRING(255),
       allowNull: false,
-    },
-    password: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
-    profilePicture: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    ip_address: {
-      type: DataTypes.STRING(250),
-      allowNull: true,
-    },
-    login_on: {
-      type: DataTypes.DATE(7),
-      allowNull: true,
-    },
-    lastLoginOn: {
-      type: DataTypes.DATE(7),
-      allowNull: true,
     },
     createdAt: {
       type: DataTypes.DATE(7),
-      allowNull: false,
       defaultValue: DataTypes.NOW,
+      allowNull: false,
     },
     createdBy: {
       type: DataTypes.STRING(255),
@@ -76,15 +47,23 @@ UserModel.init(
       type: DataTypes.BOOLEAN,
       allowNull: true,
       defaultValue: false,
-    }
+    },
   },
   {
     sequelize,
-    tableName: "users",
-    modelName: "UserModel",
+    modelName: "MessageDeleteModel",
+    tableName: "message_deletes",
   }
 );
 
+MessageDeleteModel.belongsTo(MessageModel, {
+  foreignKey: "messageId",
+  as: "messages",
+});
 
+MessageDeleteModel.belongsTo(UserModel, {
+  foreignKey: "deletedBy",
+  as: "users",
+});
 
-export default UserModel
+export default MessageDeleteModel;

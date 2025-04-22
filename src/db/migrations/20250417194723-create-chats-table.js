@@ -5,45 +5,36 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     try {
-      await queryInterface.createTable('group_members', {
+      await queryInterface.createTable('chats', {
         id: {
           type: Sequelize.INTEGER,
           allowNull: false,
-          autoIncrement: true,
-          primaryKey: true
+          primaryKey: true,
+          autoIncrement: true
         },
-        groupId: {
-          type: Sequelize.INTEGER,
+        roomId: {
+          type: Sequelize.STRING(100),
           allowNull: false,
-          references: {
-            model: 'groups',
-            key: 'id',
-          },
         },
-        memberId: {
-          type: Sequelize.UUID,
-          allowNull: false,
-          references: {
-            model: 'users',
-            key: 'guid',
-          },
+        type: {
+          type: Sequelize.ENUM('P', 'G'),
+          allowNull: true,
         },
-        isAdmin: {
-          type: Sequelize.BOOLEAN,
-          allowNull: false,
-          defaultValue: false,
+        avatarUrl: {
+          type: Sequelize.TEXT(),
+          allowNull: true,
         },
         createdAt: {
-          type: Sequelize.DataTypes.DATE(7),
+          type: Sequelize.DATE(7),
           defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
           allowNull: false,
         },
         createdBy: {
           type: Sequelize.STRING(255),
-          allowNull: false
+          allowNull: true
         },
         updatedAt: {
-          type: Sequelize.DataTypes.DATE(7),
+          type: Sequelize.DATE(7),
           allowNull: true,
         },
         updatedBy: {
@@ -59,7 +50,7 @@ module.exports = {
           type: Sequelize.BOOLEAN,
           allowNull: true,
           defaultValue: false,
-        }
+        },
       });
     } catch (error) {
       console.log("Migration error", error);
@@ -68,11 +59,9 @@ module.exports = {
 
   async down(queryInterface) {
     try {
-      await queryInterface.dropTable('group_members');
+      await queryInterface.dropTable('chats');
     } catch (error) {
       console.log("Migration error", error);
     }
-
   }
 };
-

@@ -5,51 +5,36 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     try {
-      await queryInterface.createTable('chat_contacts', {
+      await queryInterface.createTable('message_deletes', {
         id: {
           type: Sequelize.INTEGER,
-          autoIncrement: true,
+          allowNull: false,
           primaryKey: true,
-          allowNull: false
+          autoIncrement: true
         },
-        userId: {
+        messageId: {
           type: Sequelize.INTEGER,
           allowNull: false,
           references: {
-            model: 'users',
+            model: 'messages',
             key: 'id',
-          }
+          },
         },
-        currentUserId: {
-          type: Sequelize.INTEGER,
+        deletedBy: {
+          type: Sequelize.STRING(255),
           allowNull: false
         },
-        isMuted: {
-          type: Sequelize.BOOLEAN,
-          allowNull: false,
-          defaultValue: false,
-        },
-        isArchived: {
-          type: Sequelize.BOOLEAN,
-          allowNull: false,
-          defaultValue: false,
-        },
-        isBlocked: {
-          type: Sequelize.BOOLEAN,
-          allowNull: false,
-          defaultValue: false,
-        },
         createdAt: {
-          type: Sequelize.DataTypes.DATE(7),
+          type: Sequelize.DATE(7),
           defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
           allowNull: false,
         },
         createdBy: {
           type: Sequelize.STRING(255),
-          allowNull: false
+          allowNull: true
         },
         updatedAt: {
-          type: Sequelize.DataTypes.DATE(7),
+          type: Sequelize.DATE(7),
           allowNull: true,
         },
         updatedBy: {
@@ -65,17 +50,16 @@ module.exports = {
           type: Sequelize.BOOLEAN,
           allowNull: true,
           defaultValue: false,
-        }
-      })
+        },
+      });
     } catch (error) {
-      console.log("Migration error", error)
+      console.log("Migration error", error);
     }
   },
 
-
- async down(queryInterface) {
+  async down(queryInterface) {
     try {
-      await queryInterface.dropTable('chat_contacts');
+      await queryInterface.dropTable('message_deletes');
     } catch (error) {
       console.log("Migration error", error);
     }

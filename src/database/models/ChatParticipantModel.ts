@@ -1,10 +1,11 @@
-"use strict";
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../connection";
+import ChatModel from "./ChatModel";
+import UserModel from "./UserModel";
 
-class UserModel extends Model {}
+class ChatParticipantModel extends Model {}
 
-UserModel.init(
+ChatParticipantModel.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -12,42 +13,36 @@ UserModel.init(
       primaryKey: true,
       autoIncrement: true
     },
-    guid: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      allowNull: false,
-      unique: true
-    },
-    firstName: {
-      type: DataTypes.STRING(50),
+    chatId: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
-    lastName: {
-      type: DataTypes.STRING(50),
+    userId: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
-    email: {
-      type: DataTypes.STRING(255),
+    isAdmin: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
       allowNull: false,
     },
-    password: {
-      type: DataTypes.STRING(255),
+    isMuted: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
       allowNull: false,
     },
-    profilePicture: {
-      type: DataTypes.STRING,
-      allowNull: true,
+    isArchived: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
     },
-    ip_address: {
-      type: DataTypes.STRING(250),
-      allowNull: true,
+    isBlocked: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
     },
-    login_on: {
-      type: DataTypes.DATE(7),
-      allowNull: true,
-    },
-    lastLoginOn: {
-      type: DataTypes.DATE(7),
+    blockedBy: {
+      type: DataTypes.INTEGER,
       allowNull: true,
     },
     createdAt: {
@@ -76,15 +71,23 @@ UserModel.init(
       type: DataTypes.BOOLEAN,
       allowNull: true,
       defaultValue: false,
-    }
+    },
   },
   {
     sequelize,
-    tableName: "users",
-    modelName: "UserModel",
+    tableName: "chat_participants",
+    modelName: "ChatParticipantModel",
   }
 );
 
+ChatParticipantModel.belongsTo(ChatModel, {
+  foreignKey: "chatId",
+  as: "chats",
+});
 
+ChatParticipantModel.belongsTo(UserModel, {
+  foreignKey: "userId",
+  as: "users",
+});
 
-export default UserModel
+export default ChatParticipantModel;

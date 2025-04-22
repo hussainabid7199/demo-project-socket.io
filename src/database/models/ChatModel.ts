@@ -1,10 +1,9 @@
-"use strict";
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../connection";
 
-class UserModel extends Model {}
+class ChatModel extends Model {}
 
-UserModel.init(
+ChatModel.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -12,42 +11,16 @@ UserModel.init(
       primaryKey: true,
       autoIncrement: true
     },
-    guid: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      allowNull: false,
-      unique: true
-    },
-    firstName: {
-      type: DataTypes.STRING(50),
+    roomId: {
+      type: DataTypes.STRING(100),
       allowNull: false,
     },
-    lastName: {
-      type: DataTypes.STRING(50),
-      allowNull: false,
-    },
-    email: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
-    password: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
-    profilePicture: {
-      type: DataTypes.STRING,
+    type: {
+      type: DataTypes.ENUM("P", "G"),
       allowNull: true,
     },
-    ip_address: {
-      type: DataTypes.STRING(250),
-      allowNull: true,
-    },
-    login_on: {
-      type: DataTypes.DATE(7),
-      allowNull: true,
-    },
-    lastLoginOn: {
-      type: DataTypes.DATE(7),
+    avatarUrl: {
+      type: DataTypes.TEXT,
       allowNull: true,
     },
     createdAt: {
@@ -76,15 +49,13 @@ UserModel.init(
       type: DataTypes.BOOLEAN,
       allowNull: true,
       defaultValue: false,
-    }
+    },
   },
   {
     sequelize,
-    tableName: "users",
-    modelName: "UserModel",
+    tableName: "chats",
+    modelName: "ChatModel",
   }
 );
 
-
-
-export default UserModel
+export default ChatModel;

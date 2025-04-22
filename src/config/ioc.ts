@@ -3,18 +3,12 @@ import { Container } from "inversify";
 import { TYPES } from "./types";
 import IUserService from "../services/interface/IUserService";
 import IAccountService from "../services/interface/IAccountService";
-import IChatService from "../services/interface/IChatService";
-import IGroupService from "../services/interface/IGroupService";
 import IMiscellaneousService from "../services/interface/IMiscellaneousService";
-import IMessageService from "../services/interface/IMessageService";
 
 import { SocketServer } from "../socket";
 import UserService from "../services/UserService";
 import AccountService from "../services/AccountService";
-import ChatService from "../services/ChatService";
-import GroupService from "../services/GroupService";
 import MiscellaneousService from "../services/MiscellaneousService";
-import MessageService from "../services/MessageService";
 
 export function createContainer(io: SocketServer): Container {
   const container = new Container();
@@ -25,9 +19,9 @@ export function createContainer(io: SocketServer): Container {
   container
     .bind<IMiscellaneousService>(TYPES.IMiscellaneousService)
     .to(MiscellaneousService);
-  container.bind<IChatService>(TYPES.IChatService).to(ChatService);
-  container.bind<IGroupService>(TYPES.IGroupService).to(GroupService);
-  container.bind<IMessageService>(TYPES.IMessageService).to(MessageService);
+  // container.bind<IChatService>(TYPES.IChatService).to(ChatService);
+  // container.bind<IGroupService>(TYPES.IGroupService).to(GroupService);
+  // container.bind<IMessageService>(TYPES.IMessageService).to(MessageService);
 
   return container;
 }
