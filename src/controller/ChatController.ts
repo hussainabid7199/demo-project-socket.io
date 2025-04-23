@@ -45,43 +45,12 @@ export class ChatController implements interfaces.Controller {
     this.currentUserGuid = this.currentUser.guid;
   }
 
-//   @httpGet("/contact", authentication)
-//   public async contact(
-//     @request() req: Request,
-//     @response() res: Response
-//   ): Promise<Response<ChatUserListDto | void>> {
-//     try {
-//       const userExist = await this.userService.getByGuid(this.currentUserId, this.currentUserGuid);
-
-//       if (!userExist) {
-//         return res
-//           .status(400)
-//           .json({ success: false, message: "User does not exist" });
-//       }
-
-//       const response = await this.chatService.getChatContact();
-
-//       if (response && response.data && response.success) {
-//         return res.status(200).json(response);
-//       } else {
-//         return res.status(400).json(response);
-//       }
-//     } catch (error) {
-//       console.error("Error while fetching contact:", error);
-//       return res.status(500).json({
-//         success: false,
-//         message: "Internal server error",
-//         error: "Internal server error",
-//       });
-//     }
-//   }
-
   @httpPost("/private", authentication)
   public async oneToOneChat(
     @request() req: Request,
     @response() res: Response
   ): Promise<Response<ChatDto | void>> {
-    const t = await sequelize.transaction();
+    const t = await sequelize.transaction()
     try {
       const { userId } = req.body;
 
@@ -154,7 +123,6 @@ export class ChatController implements interfaces.Controller {
     const t = await sequelize.transaction();
     try {
       const model: ChatActionDataModel = req.body;
-
       const response = await this.chatService.chatAction(model);
 
       if (response && response.data && response.success) {

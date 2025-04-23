@@ -6,6 +6,8 @@ import UserModel from "../database/models/UserModel";
 import Response from "../dtos/Response";
 import BcryptUtils from "../utils/bcrypt.utils";
 import generateToken from "../jwt/jwt-token";
+import logError, { extractErrorMessage } from "../utils/error-logging";
+
 
 @injectable()
 export default class AccountService implements IAccountService {
@@ -90,14 +92,18 @@ export default class AccountService implements IAccountService {
           message: "Login failed",
         };
       }
-    } catch (e) {
-      console.log(e);
-      throw new Error("Some error occurred!");
-    }
-  }
+    } catch (error) {
+      logError({
+        error: extractErrorMessage(error),
+        errorType: "DATABASE_ERROR",
+        errorCode: "DB001",
+      });
 
-  register(model: UserModel): Promise<UserDto> {
-    console.log(model);
-    throw new Error("Method not implemented.");
+      return {
+        success: false,
+        status: 400,
+        message: "Some error occurred while login",
+      };
+    }
   }
 }

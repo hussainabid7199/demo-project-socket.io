@@ -23,10 +23,10 @@ import pictureUpload from "../utils/multer/picture-upload.utils";
 
 @controller("/account")
 export class AccountController implements interfaces.Controller {
-  private readonly _accountService: IAccountService;
+  private readonly accountService: IAccountService;
 
   constructor(@inject(TYPES.IAccountService) accountService: IAccountService) {
-    this._accountService = accountService;
+    this.accountService = accountService;
   }
 
   @httpGet("/health")
@@ -49,7 +49,7 @@ export class AccountController implements interfaces.Controller {
     const model: LoginDataModel = req.body;
     const t = await sequelize.transaction();
     try {
-      const response = await this._accountService.login(model);
+      const response = await this.accountService.login(model);
       const client_ip = req.clientIp;
 
       if (response && response.success && response.data) {

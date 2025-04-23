@@ -22,3 +22,9 @@ export enum ChatType {
   PRIVATE = 'P',
   GROUP = 'G'
 }
+
+export enum GroupInviteStatus{
+  PENDING = "PENDING", 
+  ACCEPTED = "ACCEPTED", 
+  DECLINED ="DECLINED"
+}

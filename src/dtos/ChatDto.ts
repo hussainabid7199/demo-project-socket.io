@@ -1,4 +1,5 @@
 export default interface ChatDto{
+  id: number;
   roomId: string;
   type: string;
   name?: string;

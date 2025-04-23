@@ -73,3 +73,6 @@ GroupInviteModel.belongsTo(UserModel, {
   foreignKey: "invitedUserId",
   as: "users",
 });
+
+
+export default GroupInviteModel;
