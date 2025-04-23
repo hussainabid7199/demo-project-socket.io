@@ -11,7 +11,7 @@ import {
 } from "inversify-express-utils";
 import { TYPES } from "../config/types";
 import IAccountService from "../services/interface/IAccountService";
-import LoginModel from "../models/LoginDataModel";
+import LoginDataModel from "../models/LoginDataModel";
 import UserDto, { CurrentUserDto } from "../dtos/UserDto";
 import sequelize from "../database/connection";
 import { UserDataModel } from "../models/UserDataModel";
@@ -46,7 +46,7 @@ export class AccountController implements interfaces.Controller {
     @request() req: Request,
     @response() res: Response,
   ): Promise<UserDto | void> {
-    const model: LoginModel = req.body;
+    const model: LoginDataModel = req.body;
     const t = await sequelize.transaction();
     try {
       const response = await this._accountService.login(model);

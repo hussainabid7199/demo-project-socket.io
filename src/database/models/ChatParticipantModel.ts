@@ -26,12 +26,27 @@ ChatParticipantModel.init(
       defaultValue: false,
       allowNull: false,
     },
+    isAdminMsg: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
     isMuted: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
       allowNull: false,
     },
     isArchived: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
+    leaveGroup: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
+    removeGroup: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
       allowNull: false,

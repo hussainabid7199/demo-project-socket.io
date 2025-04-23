@@ -33,12 +33,27 @@ module.exports = {
           defaultValue: false,
           allowNull: false,
         },
+        isAdminMsg: {
+          type: Sequelize.BOOLEAN,
+          defaultValue: false,
+          allowNull: false,
+        },
         isMuted: {
           type: Sequelize.BOOLEAN,
           defaultValue: false,
           allowNull: false,
         },
         isArchived: {
+          type: Sequelize.BOOLEAN,
+          defaultValue: false,
+          allowNull: false,
+        },
+        leaveGroup: {
+          type: Sequelize.BOOLEAN,
+          defaultValue: false,
+          allowNull: false,
+        },
+        removeGroup: {
           type: Sequelize.BOOLEAN,
           defaultValue: false,
           allowNull: false,

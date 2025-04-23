@@ -22,3 +22,10 @@ export interface ChatParticipantDataModel{
   isDeleted?: boolean
 }
 
+export interface ChatActionDataModel{
+  type: string,
+  chatId: number,
+  userId: number,
+  action: string
+}
+

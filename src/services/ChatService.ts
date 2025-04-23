@@ -2,9 +2,10 @@ import { inject, injectable } from "inversify";
 import { TYPES } from "../config/types";
 import IChatService from "./interface/IChatService";
 import Response from "../dtos/Response";
-import ChatDto from "../dtos/ChatDto";
+import ChatDto, { ChatParticipantDto } from "../dtos/ChatDto";
 import IUserService from "./interface/IUserService";
 import {
+  ChatActionDataModel,
   ChatContactDataModel,
   ChatParticipantDataModel,
 } from "../models/ChatDataModel";
@@ -23,6 +24,7 @@ import {
   GroupActionStatus,
   MessagePermission,
 } from "../enums/action.enum";
+import { GroupDataModel } from "../models/GroupDataModel";
 
 @injectable()
 export default class ChatService implements IChatService {
@@ -60,6 +62,12 @@ export default class ChatService implements IChatService {
     }
 
     const roomId = `${this.currentUserId}_${user.id}`;
+    const model: ChatContactDataModel = {
+      roomId: roomId,
+      type: ChatType.PRIVATE,
+      createdBy: this.currentUserGuid,
+    };
+
     const chatExist = await ChatModel.findOne({
       where: {
         roomId: roomId,
@@ -68,12 +76,6 @@ export default class ChatService implements IChatService {
       },
       raw: true,
     });
-
-    const model: ChatContactDataModel = {
-      roomId: roomId,
-      type: ChatType.PRIVATE,
-      createdBy: this.currentUserGuid,
-    };
 
     let response;
     if (chatExist) {
@@ -136,21 +138,19 @@ export default class ChatService implements IChatService {
   }
 
   async groupChat(
-    name: string,
-    description: string,
-    participant: number[]
+   model: GroupDataModel
   ): Promise<Response<ChatDto>> {
     const groupUniqueId = await generateUniqueId();
 
-    const model: ChatContactDataModel = {
+    const chatModel: ChatContactDataModel = {
       roomId: groupUniqueId,
       type: ChatType.GROUP,
-      name: name,
-      description: description,
+      name: model.name,
+      description: model.description,
       createdBy: this.currentUserGuid,
     };
 
-    const { ...dbModel } = model;
+    const { ...dbModel } = chatModel;
 
     this.io.emitSocketEvent(
       this.currentUserGuid,
@@ -174,9 +174,9 @@ export default class ChatService implements IChatService {
     ];
 
     let groupParticipant;
-    if (participant && participant.length > 0) {
-      const model: ChatParticipantDataModel[] = [];
-      const currentParticipant: ChatParticipantDataModel[] = participant.map(
+    if (model.participant && model.participant.length > 0) {
+      const participantModel: ChatParticipantDataModel[] = [];
+      const currentParticipant: ChatParticipantDataModel[] = model.participant.map(
         (x) => {
           return {
             chatId: response.id,
@@ -191,7 +191,7 @@ export default class ChatService implements IChatService {
           } as ChatParticipantDataModel;
         }
       );
-      model.push(...adminUser, ...currentParticipant);
+      participantModel.push(...adminUser, ...currentParticipant);
       groupParticipant = await ChatParticipantModel.bulkCreate(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         model as unknown as Optional<any, string>[]
@@ -214,14 +214,9 @@ export default class ChatService implements IChatService {
     }
   }
 
-  async chatAction(
-    type: string,
-    chatId: number,
-    userId: number,
-    action: string
-  ): Promise<Response<ChatDto>> {
+  async chatAction(model:ChatActionDataModel): Promise<Response<ChatParticipantDto>> {
     const user = (await UserModel.findOne({
-      where: { userId: userId },
+      where: { userId: model.userId },
       raw: true,
     })) as UserBasicDto | null;
 
@@ -234,7 +229,7 @@ export default class ChatService implements IChatService {
     }
 
     const chat = (await ChatModel.findOne({
-      where: { chatId: chatId },
+      where: { chatId: model.chatId },
       raw: true,
     })) as ChatDto | null;
 
@@ -246,59 +241,127 @@ export default class ChatService implements IChatService {
       };
     }
 
-    if (type === ChatType.GROUP) {
-      // check is current user admin
-      let isCurrentUserAdmin;
-      const isAdmin = await ChatParticipantModel.findOne({
-        where: {
-          chatId: chatId,
-          userId: user.id,
-          isAdmin: true,
-          isActive: true,
-          isDeleted: false,
-          isBlocked: false,
-        },
-        raw: true,
-      });
+    const participant = await ChatParticipantModel.findOne({
+      where: {
+        chatId: model.chatId,
+        userId: user.id,
+        isActive: true,
+        isDeleted: false,
+        isBlocked: false,
+      },
+    });
 
-      if (isAdmin) isCurrentUserAdmin = true;
+    const isCurrentUserParticipant = await ChatParticipantModel.findOne({
+      where: {
+        chatId: model.chatId,
+        userId: this.currentUserId,
+        isActive: true,
+        isDeleted: false,
+        isBlocked: false,
+      },
+    });
 
-      if (isCurrentUserAdmin) {
-        switch (action) {
+    const updatePayload: Partial<ChatParticipantDto> = {};
+    if (model.type === ChatType.GROUP && chat.type === ChatType.GROUP) {
+      if (chat.type === ChatType.GROUP && participant?.dataValues.isAdmin) {
+        switch (model.action) {
           case GroupActionStatus.REMOVED:
-            // Remove the specific group participant
+            updatePayload.removeGroup = true;
+            updatePayload.isActive = false;
+            updatePayload.updatedBy = this.currentUserGuid;
             break;
+
           case MessagePermission.ADMIN:
-            // Control if the user is admin
+            updatePayload.isAdminMsg = true;
+            updatePayload.updatedBy = this.currentUserGuid;
+            break;
+
+          case GroupActionStatus.LEAVE:
+            updatePayload.leaveGroup = true;
+            updatePayload.updatedBy = this.currentUserGuid;
+            break;
+          case ChatAction.MUTE:
+            updatePayload.isMuted = true;
+            updatePayload.updatedBy = this.currentUserGuid;
+            break;
+          case ChatAction.ARCHIVE:
+            updatePayload.isArchived = true;
+            updatePayload.updatedBy = this.currentUserGuid;
             break;
         }
       } else {
-        switch (action) {
+        switch (model.action) {
           case GroupActionStatus.LEAVE:
-            // Leave group by the current login user
+            updatePayload.leaveGroup = true;
+            updatePayload.updatedBy = this.currentUserGuid;
             break;
           case ChatAction.MUTE:
-            // Mute the group for current login user
+            updatePayload.isMuted = true;
+            updatePayload.updatedBy = this.currentUserGuid;
             break;
           case ChatAction.ARCHIVE:
-            // Archive the group for current login user
+            updatePayload.isArchived = true;
+            updatePayload.updatedBy = this.currentUserGuid;
             break;
         }
       }
-    } else if (type === ChatType.PRIVATE) {
-      switch (action) {
+    } else if (model.type === ChatType.PRIVATE && chat.type === ChatType.PRIVATE) {
+      switch (model.action) {
         case ChatAction.BLOCK:
-          // Block the other user associated with you in chat.
+          if (
+            participant?.dataValues.id != this.currentUserId &&
+            isCurrentUserParticipant
+          ) {
+            updatePayload.isBlocked = true;
+            updatePayload.blockedBy = this.currentUserId;
+            updatePayload.updatedBy = this.currentUserGuid;
+          }
           break;
         case ChatAction.MUTE:
-          // Mute the chat for current login user
+          updatePayload.isMuted = true;
+          updatePayload.updatedBy = this.currentUserGuid;
           break;
         case ChatAction.ARCHIVE:
-          // Archive the chat for current login user
+          updatePayload.isArchived = true;
+          updatePayload.updatedBy = this.currentUserGuid;
           break;
       }
     }
 
-    throw new Error("Method not implemented.");
+    const status = await participant?.update(updatePayload, {
+      where: {
+        chatId: model.chatId,
+        userId: user.id,
+        isActive: true,
+        isDeleted: false,
+        isBlocked: false,
+      },
+      raw: true
+    });
+
+    if(!status){
+      return {
+        success: false,
+        status: 400,
+        message: "Some error occurred while updating the action",
+      };
+    }
+
+    const response = updatePayload as ChatParticipantDto;
+
+    if (response) {
+      return {
+        success: true,
+        status: 200,
+        message: "Chat created successfully!",
+        data: response,
+      };
+    } else {
+      return {
+        success: false,
+        status: 400,
+        message: "Some error occurred while updating the action",
+      };
+    }
   }
 }

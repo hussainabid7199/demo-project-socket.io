@@ -1,8 +1,10 @@
-import ChatDto from "../../dtos/ChatDto";
+import ChatDto, { ChatParticipantDto } from "../../dtos/ChatDto";
 import Response from "../../dtos/Response";
+import { ChatActionDataModel } from "../../models/ChatDataModel";
+import { GroupDataModel } from "../../models/GroupDataModel";
 
 export default interface IChatService {
   oneToOneChat(userId: number): Promise<Response<ChatDto>>;
-  groupChat(name: string, description: string, participant: number[]): Promise<Response<ChatDto>>;
-  chatAction(type: string, chatId: number, userId: number, action: string): Promise<Response<ChatDto>>;
+  groupChat(model: GroupDataModel): Promise<Response<ChatDto>>;
+  chatAction(model: ChatActionDataModel): Promise<Response<ChatParticipantDto>>;
 }

@@ -1,7 +1,10 @@
 import cluster from "node:cluster";
 import { cpus } from "node:os";
 
-export function startCluster(workerStarter: () => void, basePort: number): void {
+export function startCluster(
+  workerStarter: () => void,
+  basePort: number
+): void {
   const numCPUs = cpus().length;
 
   if (cluster.isPrimary) {
@@ -16,8 +19,10 @@ export function startCluster(workerStarter: () => void, basePort: number): void 
     }
 
     cluster.on("exit", (worker) => {
-      console.warn(`Worker ${worker.process.pid} died. Restarting...`);
-      cluster.fork();
+      setTimeout(() => {
+        console.warn(`Worker ${worker.process.pid} died. Restarting...`);
+        cluster.fork();
+      }, 60000);
     });
   } else {
     workerStarter();
