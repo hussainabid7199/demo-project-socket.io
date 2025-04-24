@@ -2,5 +2,6 @@
 import "./AccountController";
 import "./UserController";
 import "./ChatController";
-// import "./GroupController";
+import "./GroupController";
+import "./ErrorController";
 // import "./MessageController";

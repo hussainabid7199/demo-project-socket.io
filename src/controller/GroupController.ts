@@ -16,9 +16,9 @@ import IUserService from "../services/interface/IUserService";
 import IMiscellaneousService from "../services/interface/IMiscellaneousService";
 import { CurrentUserDto } from "../dtos/UserDto";
 import { validateSchema } from "../middleware/validation.middleware";
-import ChatActionSchema from "../schema/ChatActionSchema";
 import IGroupService from "../services/interface/IGroupService";
 import { GroupInviteDataModel } from "../models/GroupDataModel";
+import GroupInviteSchema from "../schema/GroupInviteSchema";
 
 @controller("/group")
 export class GroupController implements interfaces.Controller {
@@ -44,7 +44,7 @@ export class GroupController implements interfaces.Controller {
   }
   
 
-  @httpPost("/invite", authentication, validateSchema(ChatActionSchema))
+  @httpPost("/invite", authentication, validateSchema(GroupInviteSchema))
   public async invite(
     @request() req: Request,
     @response() res: Response

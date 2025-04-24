@@ -6,7 +6,7 @@ import UserModel from "../database/models/UserModel";
 import Response from "../dtos/Response";
 import BcryptUtils from "../utils/bcrypt.utils";
 import generateToken from "../jwt/jwt-token";
-import logError, { extractErrorMessage } from "../utils/error-logging";
+import logError from "../utils/error-logging";
 
 
 @injectable()
@@ -94,9 +94,8 @@ export default class AccountService implements IAccountService {
       }
     } catch (error) {
       logError({
-        error: extractErrorMessage(error),
+        error: error,
         errorType: "DATABASE_ERROR",
-        errorCode: "DB001",
       });
 
       return {

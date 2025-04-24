@@ -14,7 +14,10 @@ import ChatParticipantModel from "../database/models/ChatParticipantModel";
 import { Optional } from "sequelize";
 import { GroupInviteStatus } from "../enums/action.enum";
 import GroupInviteModel from "../database/models/GroupInviteModel";
-import GroupInviteBasicDataModel, { GroupInviteDataModel } from "../models/GroupDataModel";
+import GroupInviteBasicDataModel, {
+  GroupInviteDataModel,
+} from "../models/GroupDataModel";
+import logError from "../utils/error-logging";
 
 @injectable()
 export default class GroupService implements IGroupService {
@@ -40,104 +43,122 @@ export default class GroupService implements IGroupService {
   async inviteGroupParticipant(
     model: GroupInviteDataModel
   ): Promise<Response<GroupInviteDto[]>> {
-    const users = (await UserModel.findAll({
-      where: {
-        id: model.invitedUser,
-        isActive: true,
-        isDeleted: false,
-      },
-      raw: true,
-    })) as unknown as UserDto[];
+    try {
+      const users = (await UserModel.findAll({
+        where: {
+          id: model.invitedUser,
+          isActive: true,
+          isDeleted: false,
+        },
+        raw: true,
+      })) as unknown as UserDto[];
 
-    if (users.length == 0 && !users) {
+      if (users.length == 0 && !users) {
+        return {
+          success: false,
+          status: 400,
+          message: "User not found.",
+        };
+      }
+
+      const chat = (await ChatModel.findOne({
+        where: {
+          id: model.chatId,
+          type: model.type,
+          isActive: true,
+          isDeleted: false,
+        },
+        raw: true,
+      })) as ChatDto | null;
+
+      if (!chat) {
+        return {
+          success: false,
+          status: 400,
+          message: "Chat not found.",
+        };
+      }
+
+      const isCurrentUserParticipant = (await ChatParticipantModel.findOne({
+        where: {
+          chatId: chat.id,
+          userId: this.currentUserId,
+          isActive: true,
+          isDeleted: false,
+        },
+        raw: true,
+      })) as ChatParticipantDto | null;
+
+      if (!isCurrentUserParticipant) {
+        return {
+          success: false,
+          status: 401,
+          message: "You are not authorized to add participant",
+        };
+      }
+
+      const userIds: number[] = users.map((x) => x.id);
+      const participant = (await ChatParticipantModel.findAll({
+        where: {
+          chatId: chat.id,
+          userIds: userIds,
+          isActive: true,
+          isDeleted: false,
+        },
+        raw: true,
+      })) as unknown as ChatParticipantDto[];
+
+      if (participant.length > 0 && participant) {
+        return {
+          success: false,
+          status: 400,
+          message: "Participant already exist.",
+        };
+      }
+
+      const invitePayloads: Partial<GroupInviteBasicDataModel>[] = userIds.map(
+        (userId) => ({
+          chatId: chat.id,
+          invitedUserId: userId,
+          invitedBy: this.currentUserId,
+          status: GroupInviteStatus.PENDING,
+          createdBy: this.currentUserGuid,
+          isActive: true,
+          isDeleted: false,
+        })
+      );
+
+      const inviteParticipant = await GroupInviteModel.bulkCreate(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        invitePayloads as unknown as Optional<any, string>[]
+      );
+
+      const response = inviteParticipant as unknown as GroupInviteDto[];
+
+      if (response) {
+        return {
+          success: true,
+          status: 200,
+          message: "Invitation sent successfully.",
+          data: response,
+        };
+      } else {
+        return {
+          success: false,
+          status: 400,
+          message: "Some error occurred while sending invitation",
+        };
+      }
+    } catch (error) {
+      logError({
+        error: error,
+        errorType: "DATABASE_ERROR",
+      });
+
       return {
         success: false,
         status: 400,
-        message: "User not found.",
-      };
-    }
-
-    const chat = (await ChatModel.findOne({
-      where: { id: model.chatId, type: model.type, isActive: true, isDeleted: false },
-      raw: true,
-    })) as ChatDto | null;
-
-    if (!chat) {
-      return {
-        success: false,
-        status: 400,
-        message: "Chat not found.",
-      };
-    }
-
-    const isCurrentUserParticipant = (await ChatParticipantModel.findOne({
-      where: {
-        chatId: chat.id,
-        userId: this.currentUserId,
-        isActive: true,
-        isDeleted: false,
-      },
-      raw: true,
-    })) as ChatParticipantDto | null;
-
-    if (!isCurrentUserParticipant) {
-      return {
-        success: false,
-        status: 401,
-        message: "You are not authorized to add participant",
-      };
-    }
-
-    const userIds: number[] = users.map((x) => x.id);
-    const participant = (await ChatParticipantModel.findAll({
-      where: {
-        chatId: chat.id,
-        userId: userIds,
-        isActive: true,
-        isDeleted: false,
-      },
-      raw: true,
-    })) as unknown as ChatParticipantDto[];
-
-    if (participant.length > 0 && participant) {
-      return {
-        success: false,
-        status: 400,
-        message: "Participant already exist.",
-      };
-    }
-
-    const invitePayloads: Partial<GroupInviteBasicDataModel>[] = userIds.map(
-      (userId) => ({
-        chatId: chat.id,
-        invitedUserId: userId,
-        invitedBy: this.currentUserId,
-        status: GroupInviteStatus.PENDING,
-        createdBy: this.currentUserGuid,
-        isActive: true,
-        isDeleted: false,
-      })
-    );
-
-    const inviteParticipant = await GroupInviteModel.bulkCreate(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      invitePayloads as unknown as Optional<any, string>[]
-    );
-
-    const response = inviteParticipant as unknown as GroupInviteDto[];
-
-    if (response) {
-      return {
-        success: true,
-        status: 200,
-        message: "Invitation sent successfully.",
-        data: response,
-      };
-    } else {
-      return {
-        success: false,
-        status: 400,
-        message: "Some error occurred while sending invitation",
+        message: "Some error occurred while sending group invitation",
       };
     }
   }

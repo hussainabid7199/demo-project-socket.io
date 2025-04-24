@@ -1,33 +1,72 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import ErrorLoggerModel from "../../database/models/ErrorLoggerModel";
 
-
-interface ErrorLogInput {
-    error: string;
-    errorType: string;
-    errorCode: string;
+interface LogErrorOptions {
+  error: unknown;
+  errorType: string;
 }
 
-const logError = async ({ error, errorType, errorCode }: ErrorLogInput): Promise<void> => {
-    try {
-        await ErrorLoggerModel.create({
-            error,
-            errorType,
-            errorCode,
-        });
-    } catch (loggingError) {
-        // Optional: You can log this to console or a separate fallback
-        console.error("Failed to log error:", loggingError);
-    }
+const extractErrorMessage = (
+  e: unknown
+): {message: string; error: string; errorCode: string } => {
+  if (typeof e === "string") {
+    return { error: e, errorCode: "UNKNOWN", message: "Unknown message"};
+  }
+
+  if (e instanceof Error) {
+    const anyErr = e as any;
+
+    const message = e.message || "Unknown error";
+    const code = anyErr?.original?.code || anyErr?.code || "UNKNOWN";
+    const sql = anyErr?.sql || anyErr?.original?.sql;
+    const parameters = anyErr?.parameters || anyErr?.original?.parameters;
+    const stack = e.stack;
+
+    const errorDetails = {
+      message,
+      code,
+      sql,
+      parameters,
+      stack,
+    };
+
+    return {
+      message: message,
+      error: JSON.stringify(errorDetails, null, 2),
+      errorCode: code,
+    };
+  }
+
+  if (typeof e === "object" && e !== null && "message" in e) {
+    const msg = (e as any).message || "Unknown object error";
+    const code = (e as any).code || "UNKNOWN";
+    return {
+      message: msg,
+      error: msg,
+      errorCode: code,
+    };
+  }
+
+  return {
+    message: "Unknown message",
+    error: "Unknown error",
+    errorCode: "UNKNOWN",
+  };
 };
 
-export const extractErrorMessage = (e: unknown): string => {
-    if (e instanceof Error) return e.message;
-    if (typeof e === "string") return e;
-    if (typeof e === "object" && e !== null && "message" in e) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (e as any).message;
+const logError = ({ error, errorType }: LogErrorOptions): void => {
+  const { error: extractedError, errorCode } = extractErrorMessage(error);
+  (async () => {
+    try {
+      await ErrorLoggerModel.create({
+        error: extractedError,
+        errorType,
+        errorCode,
+      });
+    } catch (loggingError) {
+      console.error("Failed to log error:", loggingError);
     }
-    return "Unknown error";
+  })();
 };
 
 export default logError;

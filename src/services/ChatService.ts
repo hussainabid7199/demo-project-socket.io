@@ -25,7 +25,7 @@ import {
   MessagePermission,
 } from "../enums/action.enum";
 import { GroupDataModel } from "../models/GroupDataModel";
-import logError, { extractErrorMessage } from "../utils/error-logging";
+import logError from "../utils/error-logging";
 
 @injectable()
 export default class ChatService implements IChatService {
@@ -139,9 +139,8 @@ export default class ChatService implements IChatService {
       }
     } catch (error) {
       logError({
-        error: extractErrorMessage(error),
+        error: error,
         errorType: "DATABASE_ERROR",
-        errorCode: "DB001",
       });
 
       return {
@@ -227,9 +226,8 @@ export default class ChatService implements IChatService {
       }
     } catch (error) {
       logError({
-        error: extractErrorMessage(error),
+        error: error,
         errorType: "DATABASE_ERROR",
-        errorCode: "DB001",
       });
 
       return {
@@ -397,9 +395,8 @@ export default class ChatService implements IChatService {
       }
     } catch (error) {
       logError({
-        error: extractErrorMessage(error),
+        error: error,
         errorType: "DATABASE_ERROR",
-        errorCode: "DB001",
       });
 
       return {
