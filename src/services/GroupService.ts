@@ -203,6 +203,14 @@ export default class GroupService implements IGroupService {
         };
       }
 
+      if(user.id !== this.currentUserId){
+        return {
+          success: false,
+          status: 401,
+          message: "You are not authorized to take action",
+        };
+      }
+
       const chat = (await ChatModel.findOne({
         where: {
           id: model.chatId,

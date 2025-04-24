@@ -46,14 +46,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                username:
-                  type: string
-                  example: "user@example.com"
-                password:
-                  type: string
-                  example: "password123"
+              $ref: "#/components/schemas/LoginDataModel"
       responses:
         "200":
           description: Login successful
@@ -67,9 +60,18 @@ paths:
                   message:
                     type: string
                   data:
-                    type: object
+                    $ref: "#/components/schemas/UserDto"
         "400":
           description: Login failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  error:
+                    type: string
 
   /account/register:
     post:
@@ -79,25 +81,16 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: "#/components/schemas/UserSchema"
+              $ref: "#/components/schemas/UserDataModel"
       responses:
         "201":
           description: Registration successful
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Registration successful"
-                  data:
-                    $ref: "#/components/schemas/UserDto"
+                $ref: "#/components/schemas/CurrentUserDto"
         "400":
           description: Registration failed
           content:
@@ -112,753 +105,134 @@ paths:
                     type: string
                     example: "Username already taken"
                   error:
-                    type: object
-                    nullable: true
-                    example: null
-  
-  # Get
-  /chat/contact/{id}/{guid}:
-    get:
-      tags:
-        - Chat
-      summary: Get chat contacts for a user
-      operationId: getChatContact
-      security:
-        - BearerAuth: []
-        - ClientIdHeader: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID of the user
-        - name: guid
-          in: path
-          required: true
-          schema:
-            type: string
-          description: GUID of the user
-      responses:
-        "200":
-          description: Chat contact listed successfully.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    $ref: "#/components/schemas/ChatUserListDto"
-        "400":
-          description: Failed to fetch chat contact list.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
                     type: string
-                    example: "Failed to fetch chat contact list."
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Internal server error"
-                  error:
-                    type: string
-                    example: "Internal server error"
+                    example: "Some error occurred"
 
-  # Post
-  /chat/create:
+  /chat/private:
     post:
-      tags:
-        - Chat
-      summary: Create or start a new chat/contact
+      summary: Initiates or fetches a one-to-one chat with a user.
+      tags: [Chat]
       security:
-        - BearerAuth: []
-        - ClientIdHeader: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - userId
-                - currentUserId
               properties:
                 userId:
-                  type: number
-                  example: 2
-                currentUserId:
-                  type: number
-                  example: 1
+                  type: integer
+                  example: 42
       responses:
-        "200":
-          description: Chat contact created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Chat contact created"
-                  data:
-                    $ref: "#/components/schemas/ChatContactDto"
-        "400":
-          description: Invalid input or chat creation failed
-        "500":
-          description: Internal server error
+        200:
+          description: Chat created or retrieved successfully.
+        400:
+          description: Invalid request payload.
+        500:
+          description: Internal server error.
+
+  /chat/group:
+    post:
+      summary: Creates a new group chat.
+      tags: [Chat]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupDataModel"
+      responses:
+        200:
+          description: Group chat created successfully.
+        400:
+          description: Invalid request payload.
+        500:
+          description: Internal server error.
 
   /chat/action:
     post:
-      tags:
-        - Chat
-      summary: Perform a chat action (block, mute, archive)
-      operationId: chatAction
+      summary: Executes a specific chat action (e.g., typing, read).
+      tags: [Chat]
       security:
-        - BearerAuth: []
-        - ClientIdHeader: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - userId
-                - currentUserId
-                - action
-              properties:
-                userId:
-                  type: string
-                  example: "123"
-                currentUserId:
-                  type: string
-                  example: "456"
-                action:
-                  type: string
-                  enum: [BLOCK, MUTE, ARCHIVE]
-                  example: BLOCK
+              $ref: '#/components/schemas/ChatActionDataModel'
       responses:
-        "200":
-          description: Chat action performed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  status:
-                    type: integer
-                    example: 200
-                  message:
-                    type: string
-                    example: "BLOCK successful"
-        "400":
-          description: Invalid input or action already performed
-        "500":
-          description: Internal server error
+        200:
+          description: Action processed successfully.
+        400:
+          description: Invalid request payload.
+        500:
+          description: Internal server error.
 
-
-  # Get
-  /group:
-    get:
-      tags:
-        - Group
-      summary: Get all groups
-      description: Retrieves a list of all existing groups.
-      security:
-        - BearerAuth: []
-        - ClientIdHeader: []
-      responses:
-        "200":
-          description: List of groups retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-
-        "400":
-          description: Unable to retrieve groups
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Unable to retrieve groups"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Internal server error"
-                  error:
-                    type: string
-                    example: "Internal server error"
-
-  /group/member:
-    get:
-      tags:
-        - Group
-      summary: Get all group members
-      description: Retrieves a list of all group members across all groups.
-      security:
-        - BearerAuth: []
-        - ClientIdHeader: []
-      responses:
-        "200":
-          description: List of group members retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/MemberListingDto"
-        "400":
-          description: Unable to retrieve group members
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Unable to retrieve group members"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Internal server error"
-                  error:
-                    type: string
-                    example: "Internal server error"
-
+  /group/invite:
     post:
+      summary: Invite a user to a group chat
       tags:
         - Group
-      summary: Add a new member to a group
-      description: Adds a user to a group by groupId and memberId.
       security:
-        - BearerAuth: []
-        - ClientIdHeader: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - groupId
-                - memberId
-              properties:
-                groupId:
-                  type: number
-                  example: 101
-                memberId:
-                  type: number
-                  example: 5
+              $ref: '#/components/schemas/GroupInviteDataModel'
       responses:
-        "200":
-          description: Member added successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Member added to group"
-                  data:
-                    $ref: "#/components/schemas/GroupMemberDto"
-        "400":
-          description: Invalid request payload or member addition failed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Invalid request payload"
-        "500":
+        200:
+          description: Invitation sent successfully
+        400:
+          description: Bad request or invalid input
+        500:
           description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Internal server error"
-                  error:
-                    type: string
-                    example: "Internal server error"
 
-  /group/member/{groupId}:
-    get:
+  /group/action:
+    patch:
+      summary: Accept or decline a group invitation
       tags:
         - Group
-      summary: Get group members by groupId
-      description: Retrieves all members of the specified group.
       security:
-        - BearerAuth: []
-        - ClientIdHeader: []
-      parameters:
-        - name: groupId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID of the group to fetch members for
-      responses:
-        "200":
-          description: List of group members retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/GroupMemberListDto"
-        "400":
-          description: Invalid request payload or unable to retrieve members
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Invalid request payload"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Internal server error"
-                  error:
-                    type: string
-                    example: "Internal server error"
-
-  # Post
-  /group/member/remove:
-    post:
-      tags:
-        - Group
-      summary: Remove a member from a group
-      description: Removes a specific member from a group based on the groupId, memberId, and action provided.
-      security:
-        - BearerAuth: []
-        - ClientIdHeader: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                groupId:
-                  type: integer
-                  example: 123
-                memberId:
-                  type: integer
-                  example: 456
-                action:
-                  type: string
-                  example: ("REMOVE" or "LEAVE")
-              required:
-                - groupId
-                - memberId
-                - action
+              $ref: '#/components/schemas/GroupInviteActionDataModel'
       responses:
-        "200":
-          description: Member removed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: boolean
-                    example: true
-        "400":
-          description: Invalid request payload or unable to remove member
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Invalid request payload"
-        "500":
+        200:
+          description: Invitation action processed successfully
+        400:
+          description: Bad request or invalid action
+        500:
           description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Internal server error"
-                  error:
-                    type: string
-                    example: "Internal server error"
-
-  /group/create:
-    post:
-      tags:
-        - Group
-      summary: Create a new group
-      description: Creates a new group with the given name.
-      security:
-        - BearerAuth: []
-        - ClientIdHeader: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - name
-              properties:
-                name:
-                  type: string
-                  example: "Friends Group"
-      responses:
-        "200":
-          description: Group created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Group created successfully"
-                  data:
-                    $ref: "#/components/schemas/GroupDto"
-        "400":
-          description: Invalid request payload or group creation failed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Invalid request payload"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Internal server error"
-                  error:
-                    type: string
-                    example: "Internal server error"
-
-  /group/admin:
-    post:
-      tags:
-        - Group
-      summary: Add a group admin
-      security:
-        - bearerAuth: [] 
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                groupId:
-                  type: integer
-                  example: 101
-                memberId:
-                  type: string
-                  example: eaa0348c-100b-4618-8d5c-bcf99839b05b
-              required:
-                - groupId
-                - memberId
-      responses:
-        "200":
-          description: Group admin added successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Group admin added successfully"
-                  data:
-                    $ref: "#/components/schemas/GroupMemberDto"
-        "400":
-          description: Invalid request payload or operation failed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Invalid request payload"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Internal server error"
-                  error:
-                    type: string
-                    example: "Internal server error"
-
-
-  /group/{groupId}:
-    delete:
-      tags:
-        - Group
-      summary: Delete a group by ID
-      parameters:
-        - name: groupId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: ID of the group to delete
-      responses:
-        "204":
-          description: Group deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Group deleted successfully"
-                  data:
-                    $ref: "#/components/schemas/GroupMemberListDto"
-        "400":
-          description: Invalid group ID or failed to delete
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Invalid request payload"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: "Internal server error"
-                  error:
-                    type: string
-                    example: "Internal server error"
-
-
-  /user:
-    get:
-      tags:
-        - User
-      summary: Get all users
-      responses:
-        "200":
-          description: List of users retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/UserBasicDto"
-                  status:
-                    type: boolean
-                    example: true
-        "400":
-          description: Failed to retrieve users
-
-  /user/{id}:
-    get:
-      tags:
-        - User
-      summary: Get a user by ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: User data
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UserDto"
-
-  /user/{id}/{guid}:
-    get:
-      tags:
-        - User
-      summary: Get a user by ID and Guid
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: guid
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: User data fetched by ID and GUID
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UserBasicDto"
-        "400":
-          description: Invalid request or user not found
 
 components:
   schemas:
-    UserSchema:
+    LoginDataModel:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "user@example.com"
+        password:
+          type: string
+          example: "password123"
+        rememberMe:
+          type: boolean
+          example: false
+
+    UserDataModel:
       type: object
       required:
         - firstName
@@ -866,7 +240,6 @@ components:
         - email
         - password
         - confirmPassword
-        - profilePicture
       properties:
         firstName:
           type: string
@@ -883,124 +256,124 @@ components:
           type: string
           format: binary
 
-    UserDto:
+    GroupDataModel:
       type: object
+      required:
+        - name
       properties:
-        id:
-          type: number
-        firstName:
-          type: string
-        lastName:
-          type: string
-        email:
-          type: string
-        profilePicture:
-          type: string
-
-    UserBasicDto:
-      type: object
-      properties:
-        id:
-          type: number
-        firstName:
-          type: string
-        lastName:
-          type: string
-
-    ChatContactDto:
-      type: object
-      properties:
-        id:
-          type: number
-        userId:
-          type: number
-        currentUserId:
-          type: number
-        isMuted:
-          type: boolean
-        isArchived:
-          type: boolean
-        isBlocked:
-          type: boolean
-        createdAt:
-          type: string
-          format: date-time
-        createdBy:
-          type: string
-        updatedAt:
-          type: string
-          format: date-time
-          nullable: true
-        updatedBy:
-          type: string
-          nullable: true
-        isActive:
-          type: boolean
-        isDeleted:
-          type: boolean
-
-    ChatUserListDto:
-      type: object
-      properties:
-        id:
-          type: number
-        guid:
-          type: string
-        firstName:
-          type: string
-        lastName:
-          type: string
-
-    GroupDto:
-      type: object
-      properties:
-        id:
-          type: number
-          example: 101
         name:
           type: string
-          example: "Friends Group"
-        createdBy:
-          type: number
-          example: 1
-        createdAt:
+          example: "Project Team"
+        description:
           type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
+          example: "Group for all project members"
+        participant:
+          type: array
+          items:
+            type: integer
+          example: [1, 2, 3]
 
-    GroupMemberDto:
+    ChatActionDataModel:
       type: object
+      required:
+        - type
+        - chatId
+        - userId
+        - action
+      properties:
+        type:
+          type: string
+          enums: ("P" or "G")
+          example: "Use P for private and G group"
+        chatId:
+          type: integer
+          example: 123
+        userId:
+          type: integer
+          example: 123
+        action:
+          type: string
+          enums: ("LEAVE" | "ADMIN" | "MUTE" | "ARCHIVE" | "BLOCK" | "REMOVED")
+          example: "REMOVED"
+
+    GroupInviteDataModel:
+      type: object
+      required:
+        - chatId
+        - type
+        - invitedUser
+      properties:
+        chatId:
+          type: integer
+          example: 1
+        type:
+          type: string
+          enums: ("P" or "G")
+          example: "Use P for private and G group" 
+        invitedUser:
+          type: array
+          items:
+            type: integer
+          example: [2, 3, 4]
+
+    GroupInviteActionDataModel:
+      type: object
+      required:
+        - chatId
+        - userId
+        - status
+      properties:
+        chatId:
+          type: integer
+          example: 1
+        userId:
+          type: integer
+          example: 3
+        status:
+          type: string
+          enums: ("ACCEPTED" or "DECLINED")
+          example: "DECLINED"
+
+
+  # DTO
+
+    UserDto:
+      type: object
+      required:
+        - id
+        - guid
+        - firstName
+        - lastName
+        - email
+        - isActive
       properties:
         id:
-          type: number
-          example: 12
-        groupId:
-          type: number
-          example: 101
-        memberId:
-          type: number
-          example: 5
-        joinedAt:
-          type: string
-          format: date-time
-
-    GroupMemberListDto:
-      type: object
-      properties:
-        id:
-          type: number
+          type: integer
           example: 1
-        groupId:
-          type: number
-          example: 101
-        memberId:
-          type: number
-          example: 5
-        memberName:
+        guid:
           type: string
-          example: "John Doe"
+          example: 7d3e663a9-bb3-4a9cb0f11-9dce-cc9d270
+        firstName:
+          type: string
+          example: "John"
+        lastName:
+          type: string
+          example: "Deo"
+        email:
+          type: string
+          example: "mail@mail.com"
+        profilePicture:
+          type: File
+          example: "binary"
+        isActive:
+          type: boolean
+          example: "false"
+        isDeleted:
+          type: boolean
+          example: "false"
+        token:
+          type: string
+          example: "eyvVCJ9.eyJMDEifQ.QDmJ5E_a8ZzH0"
 
   securitySchemes:
     BearerAuth:
