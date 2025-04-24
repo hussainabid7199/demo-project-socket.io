@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import ErrorLoggerModel from "../../database/models/ErrorLoggerModel";
+import { storageContext } from "../../context/async-storage-context";
 
 interface LogErrorOptions {
   error: unknown;
   errorType: string;
 }
 
-const extractErrorMessage = (
+export const errorMessage = (
   e: unknown
 ): {message: string; error: string; errorCode: string } => {
   if (typeof e === "string") {
@@ -55,13 +56,17 @@ const extractErrorMessage = (
 };
 
 const logError = ({ error, errorType }: LogErrorOptions): void => {
-  const { error: extractedError, errorCode } = extractErrorMessage(error);
+  const { error: extractedError, errorCode } = errorMessage(error);
   (async () => {
     try {
+      const client_ip = storageContext.get('clientIp');
+      const requestType = storageContext.get('requestType');
       await ErrorLoggerModel.create({
         error: extractedError,
         errorType,
         errorCode,
+        ipAddress: client_ip,
+        requestType: requestType
       });
     } catch (loggingError) {
       console.error("Failed to log error:", loggingError);

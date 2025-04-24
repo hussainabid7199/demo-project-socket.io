@@ -5,7 +5,7 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     try {
-      await queryInterface.createTable('error-loggers',
+      await queryInterface.createTable('error_loggers',
         {
           id: {
             type: Sequelize.INTEGER,
@@ -15,15 +15,23 @@ module.exports = {
           },
           error: {
             type: Sequelize.TEXT(),
-            allowNull: false
+            allowNull: true
           },
           errorType: {
             type: Sequelize.STRING(255),
-            allowNull: false
+            allowNull: true
           },
           errorCode: {
             type: Sequelize.STRING(255),
-            allowNull: false
+            allowNull: true
+          },
+          requestType: {
+            type: Sequelize.TEXT(),
+            allowNull: true
+          },
+          ipAddress: {
+            type: Sequelize.STRING(250),
+            allowNull: true
           },
           createdAt: {
             type: Sequelize.DataTypes.DATE(7),
@@ -39,7 +47,7 @@ module.exports = {
 
   async down(queryInterface) {
     try {
-      await queryInterface.dropTable('error-loggers');
+      await queryInterface.dropTable('error_loggers');
     } catch (error) {
       console.log("Migration error", error);
     }

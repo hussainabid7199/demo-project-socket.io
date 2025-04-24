@@ -13,15 +13,23 @@ ErrorLoggerModel.init(
     },
     error: {
       type: DataTypes.TEXT,
-      allowNull: false,
+      allowNull: true,
     },
     errorType: {
       type: DataTypes.STRING(255),
-      allowNull: false,
+      allowNull: true,
     },
     errorCode: {
       type: DataTypes.STRING(255),
-      allowNull: false,
+      allowNull: true,
+    },
+    requestType: {
+      type: DataTypes.TEXT(),
+      allowNull: true
+    },
+    ipAddress: {
+      type: DataTypes.STRING(250),
+      allowNull: true
     },
     createdAt: {
       type: DataTypes.DATE(7),
@@ -32,7 +40,7 @@ ErrorLoggerModel.init(
   {
     sequelize,
     modelName: "ErrorLoggerModel",
-    tableName: "error-loggers",
+    tableName: "error_loggers",
     timestamps: false,
   }
 );

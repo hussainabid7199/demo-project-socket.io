@@ -18,9 +18,13 @@ const CurrentUserContext = (
       storageContext.set("guid", currentUser.guid);
       storageContext.set("email", currentUser.email);
       storageContext.set("fullName", currentUser.fullName);
+      storageContext.set('clientIp', req.clientIp);
+      storageContext.set('requestType', `${req.method} ${req.url}`);
       next();
     });
   } else {
+    storageContext.set('clientIp', req.clientIp);
+    storageContext.set('requestType', `${req.method} ${req.url}`);
     next();
   }
 };

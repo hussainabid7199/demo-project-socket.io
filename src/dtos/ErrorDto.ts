@@ -3,5 +3,6 @@ export default interface ErrorDto {
   error: string;
   errorType: string;
   errorCode: string;
+  ipAddress: string;
   createdAt: string;
 }

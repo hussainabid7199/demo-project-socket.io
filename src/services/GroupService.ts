@@ -11,13 +11,13 @@ import ChatModel from "../database/models/ChatModel";
 import ChatDto, { ChatParticipantDto } from "../dtos/ChatDto";
 import UserModel from "../database/models/UserModel";
 import ChatParticipantModel from "../database/models/ChatParticipantModel";
-import { Optional } from "sequelize";
+import { Op, Optional } from "sequelize";
 import { GroupInviteStatus } from "../enums/action.enum";
 import GroupInviteModel from "../database/models/GroupInviteModel";
 import GroupInviteBasicDataModel, {
   GroupInviteDataModel,
 } from "../models/GroupDataModel";
-import logError from "../utils/error-logging";
+import Error from "../exceptions/error-handler";
 
 @injectable()
 export default class GroupService implements IGroupService {
@@ -53,7 +53,7 @@ export default class GroupService implements IGroupService {
         raw: true,
       })) as unknown as UserDto[];
 
-      if (users.length == 0 && !users) {
+      if (users.length == 0) {
         return {
           success: false,
           status: 400,
@@ -101,7 +101,7 @@ export default class GroupService implements IGroupService {
       const participant = (await ChatParticipantModel.findAll({
         where: {
           chatId: chat.id,
-          userIds: userIds,
+          userId: userIds,
           isActive: true,
           isDeleted: false,
         },
@@ -113,6 +113,26 @@ export default class GroupService implements IGroupService {
           success: false,
           status: 400,
           message: "Participant already exist.",
+        };
+      }
+
+      const isAlreadyInvited = await GroupInviteModel.findAll({
+        where: {
+          chatId: chat.id,
+          invitedUserId: userIds,
+          status: {
+            [Op.in]: [GroupInviteStatus.PENDING, GroupInviteStatus.ACCEPTED],
+          },
+          isActive: true,
+          isDeleted: false,
+        },
+      });
+
+      if (isAlreadyInvited.length != 0) {
+        return {
+          success: false,
+          status: 400,
+          message: "Users already invited.",
         };
       }
 
@@ -150,16 +170,12 @@ export default class GroupService implements IGroupService {
         };
       }
     } catch (error) {
-      logError({
-        error: error,
-        errorType: "DATABASE_ERROR",
-      });
-
-      return {
-        success: false,
-        status: 400,
-        message: "Some error occurred while sending group invitation",
-      };
+      return Error.Handler(
+        error,
+        "DATABASE_ERROR",
+        400,
+        "Some error occurred while sending group invitation"
+      );
     }
   }
 }
