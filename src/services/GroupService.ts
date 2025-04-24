@@ -17,7 +17,8 @@ import GroupInviteModel from "../database/models/GroupInviteModel";
 import GroupInviteBasicDataModel, {
   GroupInviteDataModel,
 } from "../models/GroupDataModel";
-import Error from "../exceptions/error-handler";
+import ErrorHandler from "../exceptions/error-handler";
+
 
 @injectable()
 export default class GroupService implements IGroupService {
@@ -170,7 +171,7 @@ export default class GroupService implements IGroupService {
         };
       }
     } catch (error) {
-      return Error.Handler(
+      return ErrorHandler.Handle(
         error,
         "DATABASE_ERROR",
         400,

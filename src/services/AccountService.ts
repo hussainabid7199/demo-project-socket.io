@@ -6,7 +6,7 @@ import UserModel from "../database/models/UserModel";
 import Response from "../dtos/Response";
 import BcryptUtils from "../utils/bcrypt.utils";
 import generateToken from "../jwt/jwt-token";
-import logError from "../utils/error-logging";
+import ErrorHandler from "../exceptions/error-handler";
 
 
 @injectable()
@@ -93,16 +93,12 @@ export default class AccountService implements IAccountService {
         };
       }
     } catch (error) {
-      logError({
-        error: error,
-        errorType: "DATABASE_ERROR",
-      });
-
-      return {
-        success: false,
-        status: 400,
-        message: "Some error occurred while login",
-      };
+      return ErrorHandler.Handle(
+        error,
+        "DATABASE_ERROR",
+        400,
+        "Some error occurred while login"
+      );
     }
   }
 }

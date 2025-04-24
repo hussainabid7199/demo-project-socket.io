@@ -25,7 +25,7 @@ import {
   MessagePermission,
 } from "../enums/action.enum";
 import { GroupDataModel } from "../models/GroupDataModel";
-import logError from "../utils/error-logging";
+import ErrorHandler from "../exceptions/error-handler";
 
 @injectable()
 export default class ChatService implements IChatService {
@@ -138,16 +138,12 @@ export default class ChatService implements IChatService {
         };
       }
     } catch (error) {
-      logError({
-        error: error,
-        errorType: "DATABASE_ERROR",
-      });
-
-      return {
-        success: false,
-        status: 400,
-        message: "Some error occurred while creating chat",
-      };
+      return ErrorHandler.Handle(
+        error,
+        "DATABASE_ERROR",
+        400,
+        "Some error occurred while creating chat"
+      );
     }
   }
 
@@ -225,16 +221,12 @@ export default class ChatService implements IChatService {
         };
       }
     } catch (error) {
-      logError({
-        error: error,
-        errorType: "DATABASE_ERROR",
-      });
-
-      return {
-        success: false,
-        status: 400,
-        message: "Some error occurred while creating group chat",
-      };
+      return ErrorHandler.Handle(
+        error,
+        "DATABASE_ERROR",
+        400,
+        "Some error occurred while creating group chat"
+      );
     }
   }
 
@@ -394,16 +386,12 @@ export default class ChatService implements IChatService {
         };
       }
     } catch (error) {
-      logError({
-        error: error,
-        errorType: "DATABASE_ERROR",
-      });
-
-      return {
-        success: false,
-        status: 400,
-        message: "Some error occurred while creating chat action",
-      };
+      return ErrorHandler.Handle(
+        error,
+        "DATABASE_ERROR",
+        400,
+        "Some error occurred while creating chat action"
+      );
     }
   }
 }

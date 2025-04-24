@@ -1,8 +1,8 @@
 import logError, { errorMessage } from "../utils/error-logging";
 import Response from "../dtos/Response";
 
-export default class Error {
-  static Handler<T>(
+export default class ErrorHandler {
+  static Handle<T>(
     error: unknown,
     errorType: string = "UNKNOWN_ERROR",
     statusCode?: number,
