@@ -21,6 +21,7 @@ import ChatActionSchema from "../schema/ChatActionSchema";
 import { ChatActionDataModel } from "../models/ChatDataModel";
 import { GroupDataModel } from "../models/GroupDataModel";
 import GroupSchema from "../schema/GroupSchema";
+import { errorMessage } from "../utils/error-logging";
 
 @controller("/chat")
 export class ChatController implements interfaces.Controller {
@@ -50,7 +51,7 @@ export class ChatController implements interfaces.Controller {
     @request() req: Request,
     @response() res: Response
   ): Promise<Response<ChatDto | void>> {
-    const t = await sequelize.transaction()
+    const t = await sequelize.transaction();
     try {
       const { userId } = req.body;
 
@@ -69,12 +70,12 @@ export class ChatController implements interfaces.Controller {
         await t.rollback();
         return res.status(400).json(response);
       }
-    } catch (error) {
+    } catch (ex) {
       await t.rollback();
-      console.error("Error while creating chat:", error);
+      const { message } = errorMessage(ex);
       return res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message: message ||"Internal server error",
         error: "Internal server error",
       });
     }
@@ -87,7 +88,7 @@ export class ChatController implements interfaces.Controller {
   ): Promise<Response<ChatDto | void>> {
     const t = await sequelize.transaction();
     try {
-      const model:GroupDataModel = req.body;
+      const model: GroupDataModel = req.body;
 
       if (!model.name || !this.currentUserId) {
         return res
@@ -104,12 +105,12 @@ export class ChatController implements interfaces.Controller {
         await t.rollback();
         return res.status(400).json(response);
       }
-    } catch (error) {
+    } catch (ex) {
       await t.rollback();
-      console.error("Error while creating chat:", error);
+      const { message } = errorMessage(ex);
       return res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message: message || "Internal server error",
         error: "Internal server error",
       });
     }
@@ -132,12 +133,12 @@ export class ChatController implements interfaces.Controller {
         await t.rollback();
         return res.status(400).json(response);
       }
-    } catch (error) {
+    } catch (ex) {
       await t.rollback();
-      console.error("Error:", error);
+      const { message } = errorMessage(ex);
       return res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message: message || "Internal server error",
         error: "Internal server error",
       });
     }

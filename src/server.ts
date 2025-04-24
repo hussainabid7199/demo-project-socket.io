@@ -72,10 +72,10 @@ export async function startServer(): Promise<void> {
     app.use(CurrentUserContext);
 
     app.get("/health", (_req: Request, res: Response) => {
-      res.status(200).send("OK");
+      res.status(200).send({status: 200, message: "ok"});
     });
 
-    app.use((req, res, next) => {
+    app.use((req, _res, next) => {
       console.log(`📥 ${req.method} ${req.url} | 🔊 Port: ${PORT} | 👷 PID: ${process.pid}`);
       next();
     });
@@ -91,7 +91,7 @@ export async function startServer(): Promise<void> {
 
   const server = inversifyServer.build();
   httpServer.on("request", server);
-  const port = parseInt(process.env.PORT || "3001", 10);
+  const port = parseInt(process.env.PORT || "3001");
   httpServer.listen(port, async () => {
     try {
       await sequelize.authenticate();
@@ -100,7 +100,7 @@ export async function startServer(): Promise<void> {
         "Database Status": "✅ Connected successfully",
         "Worker Info": `🛠️ Worker PID ${process.pid}`,
         "Listening On": `🌐 http://localhost:${port}`,
-        "processMemoryStats": processMemoryStats
+        "processMemoryStats (bytes)": processMemoryStats
       });
     } catch (error) {
       console.error("Error during server startup:", error);

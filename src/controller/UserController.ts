@@ -12,13 +12,14 @@ import { TYPES } from "../config/types";
 import { UserBasicDto } from "../dtos/UserDto";
 import IUserService from "../services/interface/IUserService";
 import { authentication } from "../middleware/authentication.middleware";
+import { errorMessage } from "../utils/error-logging";
 
 @controller("/user")
 export class UserController implements interfaces.Controller {
-  private readonly _userService: IUserService;
+  private readonly userService: IUserService;
 
   constructor(@inject(TYPES.IUserService) userService: IUserService) {
-    this._userService = userService;
+    this.userService = userService;
   }
 
   @httpGet("/", authentication)
@@ -27,16 +28,17 @@ export class UserController implements interfaces.Controller {
     @response() res: Response
   ): Promise<UserBasicDto[] | void> {
     try {
-      const response = await this._userService.get();
+      const response = await this.userService.get();
       if (response && response.data && response.status) {
         res.status(200).send(response);
       } else {
         res.status(400).send(response);
       }
-    } catch (error) {
+    } catch (ex) {
+      const { message, errorCode} = errorMessage(ex);
       res.status(400).send({
-        message: "Try again!",
-        error: error,
+        message: message || "Some error occurred while fetching users",
+        error: errorCode
       });
     }
   }
@@ -48,16 +50,17 @@ export class UserController implements interfaces.Controller {
   ): Promise<UserBasicDto | void> {
     try {
       const id = +req.params.id;
-      const response = await this._userService.getById(id);
+      const response = await this.userService.getById(id);
       if (response && response.data && response.success) {
         res.status(200).send(response);
       } else {
         res.status(400).send(response);
       }
-    } catch (error) {
+    } catch (ex) {
+      const { message, errorCode} = errorMessage(ex);
       res.status(400).send({
-        message: "Try again!",
-        error: error,
+        message: message || "Some error occurred while fetching user",
+        error: errorCode
       });
     }
   }
@@ -70,16 +73,17 @@ export class UserController implements interfaces.Controller {
     try {
       const id = +req.params.id;
       const guid = req.params.guid;
-      const response = await this._userService.getByGuid(id, guid);
+      const response = await this.userService.getByGuid(id, guid);
       if (response && response.data && response.success) {
         res.status(200).send(response);
       } else {
         res.status(400).send(response);
       }
-    } catch (error) {
+    } catch (ex) {
+      const { message, errorCode} = errorMessage(ex);
       res.status(400).send({
-        message: "Try again!",
-        error: error,
+        message: message || "Some error occurred while fetching user",
+        error: errorCode
       });
     }
   }

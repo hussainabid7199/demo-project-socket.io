@@ -3,7 +3,6 @@ import { Request, Response } from "express";
 import { inject } from "inversify";
 import {
   controller,
-  httpGet,
   httpPost,
   interfaces,
   request,
@@ -20,6 +19,7 @@ import UserModel from "../database/models/UserModel";
 import LoginSchema from "../schema/LoginSchema";
 import { validateSchema } from "../middleware/validation.middleware";
 import pictureUpload from "../utils/multer/picture-upload.utils";
+import { errorMessage } from "../utils/error-logging";
 
 @controller("/account")
 export class AccountController implements interfaces.Controller {
@@ -27,18 +27,6 @@ export class AccountController implements interfaces.Controller {
 
   constructor(@inject(TYPES.IAccountService) accountService: IAccountService) {
     this.accountService = accountService;
-  }
-
-  @httpGet("/health")
-  public async account(
-    @request() req: Request,
-    @response() res: Response
-  ): Promise<void> {
-    res.status(200).send({
-      success: true,
-      message: "Health OK!",
-      data: "Health OK!",
-    });
   }
 
   @httpPost("/login", validateSchema(LoginSchema))
@@ -70,12 +58,12 @@ export class AccountController implements interfaces.Controller {
         await t.commit();
         res.status(200).send(response);
       }
-    } catch (error) {
+    } catch (ex) {
       await t.rollback();
-      console.log(error);
+      const { message, error } = errorMessage(ex);
       res.status(400).send({
-        message: "Invalid username or password",
-        error: "Invalid username or password",
+        message: message || "Invalid username or password",
+        error: error || "Invalid username or password",
       });
     }
   }
@@ -127,12 +115,13 @@ export class AccountController implements interfaces.Controller {
 
       await t.commit();
       res.status(201).json(response);
-    } catch (error) {
+    } catch (ex) {
       await t.rollback();
+      const { message, error } = errorMessage(ex);
       res.status(400).json({
         success: false,
-        message: "Some error occurred!",
-        error: error,
+        message: message || "Some error occurred!",
+        error: error || "Some error occurred!",
       });
     }
   }

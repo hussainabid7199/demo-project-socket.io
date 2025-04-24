@@ -19,6 +19,7 @@ import { validateSchema } from "../middleware/validation.middleware";
 import IGroupService from "../services/interface/IGroupService";
 import { GroupInviteDataModel } from "../models/GroupDataModel";
 import GroupInviteSchema from "../schema/GroupInviteSchema";
+import { errorMessage } from "../utils/error-logging";
 
 @controller("/group")
 export class GroupController implements interfaces.Controller {
@@ -62,12 +63,12 @@ export class GroupController implements interfaces.Controller {
         await t.rollback();
         return res.status(400).json(response);
       }
-    } catch (error) {
+    } catch (ex) {
       await t.rollback();
-      console.error("Error:", error);
+      const { message } = errorMessage(ex);
       return res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message: message || "Internal server error",
         error: "Internal server error",
       });
     }
