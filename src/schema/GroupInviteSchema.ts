@@ -1,17 +1,13 @@
 import * as Yup from "yup";
-import { GroupInviteDataModel } from "../models/GroupDataModel";
+import { GroupInviteActionDataModel } from "../models/GroupDataModel";
 
-const GroupInviteSchema: Yup.ObjectSchema<GroupInviteDataModel> = Yup.object({
-  chatId: Yup.number()
-    .required("Chat is required"),
+const GroupInviteActionSchema: Yup.ObjectSchema<GroupInviteActionDataModel> =
+  Yup.object({
+    chatId: Yup.number().required("Chat is required"),
 
-  type: Yup.string().required("Type is required"),
+    userId: Yup.number().required("Type is required"),
 
-  invitedUser: Yup.array().required("User is required").of(
-    Yup.number()
-      .typeError("Each participant must be a valid number")
-      .required("Participant ID is required")
-  ),
-});
-
-export default GroupInviteSchema;
+    status: Yup.string()
+      .required("Status is required")
+  });
+export default GroupInviteActionSchema;

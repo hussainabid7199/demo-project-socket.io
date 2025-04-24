@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { inject } from "inversify";
 import {
   controller,
+  httpPatch,
   httpPost,
   interfaces,
   request,
@@ -17,9 +18,10 @@ import IMiscellaneousService from "../services/interface/IMiscellaneousService";
 import { CurrentUserDto } from "../dtos/UserDto";
 import { validateSchema } from "../middleware/validation.middleware";
 import IGroupService from "../services/interface/IGroupService";
-import { GroupInviteDataModel } from "../models/GroupDataModel";
+import { GroupInviteActionDataModel, GroupInviteDataModel } from "../models/GroupDataModel";
 import GroupInviteSchema from "../schema/GroupInviteSchema";
 import { errorMessage } from "../utils/error-logging";
+import GroupInviteActionSchema from "../schema/GroupInviteSchema";
 
 @controller("/group")
 export class GroupController implements interfaces.Controller {
@@ -43,7 +45,6 @@ export class GroupController implements interfaces.Controller {
     this.currentUserId = this.currentUser.id;
     this.currentUserGuid = this.currentUser.guid;
   }
-  
 
   @httpPost("/invite", authentication, validateSchema(GroupInviteSchema))
   public async invite(
@@ -65,6 +66,31 @@ export class GroupController implements interfaces.Controller {
       }
     } catch (ex) {
       await t.rollback();
+      const { message } = errorMessage(ex);
+      return res.status(500).json({
+        success: false,
+        message: message || "Internal server error",
+        error: "Internal server error",
+      });
+    }
+  }
+
+  @httpPatch("/action", authentication, validateSchema(GroupInviteActionSchema))
+  public async inviteAction(
+    @request() req: Request,
+    @response() res: Response
+  ): Promise<Response<ChatDto | void>> {
+    try {
+      const model: GroupInviteActionDataModel = req.body;
+
+      const response = await this.groupService.invitationAction(model);
+
+      if (response && response.data && response.success) {
+        return res.status(200).json(response);
+      } else {
+        return res.status(400).json(response);
+      }
+    } catch (ex) {
       const { message } = errorMessage(ex);
       return res.status(500).json({
         success: false,

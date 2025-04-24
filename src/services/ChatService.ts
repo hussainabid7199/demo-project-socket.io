@@ -280,7 +280,7 @@ export default class ChatService implements IChatService {
         },
       });
 
-      const updatePayload: Partial<ChatParticipantDto> = {};
+      const updatePayload: Partial<ChatParticipantDataModel> = {};
       if (model.type === ChatType.GROUP && chat.type === ChatType.GROUP) {
         if (chat.type === ChatType.GROUP && participant?.dataValues.isAdmin) {
           switch (model.action) {

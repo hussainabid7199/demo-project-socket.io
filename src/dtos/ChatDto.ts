@@ -20,10 +20,6 @@ export interface ChatParticipantDto {
   removeGroup: boolean;
   isBlocked: boolean;
   blockedBy?: number;
-  createdAt: string;
-  createdBy?: string;
-  updatedAt?: string;
-  updatedBy?: string;
   isActive: boolean;
   isDeleted?: boolean;
 }

@@ -1,16 +1,16 @@
 export interface GroupDataModel {
-  name: string,
-  description?: string,
-  participant?: number[]
+  name: string;
+  description?: string;
+  participant?: number[];
 }
 
-export interface GroupInviteDataModel{
-  chatId: number,
-  type: string,
-  invitedUser: number[]
+export interface GroupInviteDataModel {
+  chatId: number;
+  type: string;
+  invitedUser: number[];
 }
 
-export default interface GroupInviteBasicDataModel{
+export default interface GroupInviteBasicDataModel {
   id: number;
   chatId: number;
   invitedUserId: number;
@@ -24,3 +24,8 @@ export default interface GroupInviteBasicDataModel{
   isDeleted: boolean;
 }
 
+export interface GroupInviteActionDataModel {
+  chatId: number;
+  userId: number;
+  status: string;
+}

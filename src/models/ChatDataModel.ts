@@ -9,17 +9,22 @@ export interface ChatContactDataModel {
 }
   
 export interface ChatParticipantDataModel{
-  chatId: number,
-  userId: number,
-  isAdmin?: boolean,
-  isMuted?: boolean,
-  isArchived?: boolean,
-  isBlocked?: boolean,
-  blockedBy?: string,
-  createdBy?: string,
-  updatedBy?: string,
-  isActive?: boolean,
-  isDeleted?: boolean
+  chatId: number;
+  userId: number;
+  isAdmin?: boolean;
+  isAdminMsg?: boolean;
+  isMuted?: boolean;
+  isArchived?: boolean;
+  leaveGroup?: boolean;
+  removeGroup?: boolean;
+  isBlocked?: boolean;
+  blockedBy?: number;
+  createdAt?: string;
+  createdBy?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  isActive: boolean;
+  isDeleted?: boolean;
 }
 
 export interface ChatActionDataModel{
