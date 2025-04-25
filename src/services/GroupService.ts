@@ -6,12 +6,12 @@ import IMiscellaneousService from "./interface/IMiscellaneousService";
 import UserDto, { CurrentUserDto } from "../dtos/UserDto";
 import IUserService from "./interface/IUserService";
 import { SocketServer } from "../socket";
-import GroupInviteDto from "../dtos/GroupDto";
+import GroupInviteDto, { GroupMemberDto } from "../dtos/GroupDto";
 import ChatModel from "../database/models/ChatModel";
 import ChatDto, { ChatParticipantDto } from "../dtos/ChatDto";
 import UserModel from "../database/models/UserModel";
 import ChatParticipantModel from "../database/models/ChatParticipantModel";
-import { Op, Optional } from "sequelize";
+import { Op, Optional, QueryTypes } from "sequelize";
 import { ChatType, GroupInviteStatus } from "../enums/action.enum";
 import GroupInviteModel from "../database/models/GroupInviteModel";
 import GroupInviteBasicDataModel, {
@@ -20,6 +20,7 @@ import GroupInviteBasicDataModel, {
 } from "../models/GroupDataModel";
 import ErrorHandler from "../exceptions/error-handler";
 import sequelize from "../database/connection";
+import { ChatParticipantDataModel } from "../models/ChatDataModel";
 
 @injectable()
 export default class GroupService implements IGroupService {
@@ -203,14 +204,6 @@ export default class GroupService implements IGroupService {
         };
       }
 
-      if(user.id !== this.currentUserId){
-        return {
-          success: false,
-          status: 401,
-          message: "You are not authorized to take action",
-        };
-      }
-
       const chat = (await ChatModel.findOne({
         where: {
           id: model.chatId,
@@ -228,10 +221,37 @@ export default class GroupService implements IGroupService {
         };
       }
 
+      const chatParticipant = await ChatParticipantModel.findOne({
+        where: {
+          userId: user.id,
+          chatId: chat.id,
+          isActive: true,
+          isDeleted: false,
+        },
+      });
+
+      if (chatParticipant) {
+        return {
+          success: false,
+          status: 400,
+          message: "Participant already exist.",
+        };
+      }
+
+      if (user.id !== this.currentUserId) {
+        return {
+          success: false,
+          status: 401,
+          message: "You are not authorized to take action",
+        };
+      }
+
       const invitation = await GroupInviteModel.findOne({
         where: {
           chatId: chat.id,
           invitedUserId: user.id,
+          status: GroupInviteStatus.PENDING,
+          isActive: true,
         },
       });
 
@@ -262,14 +282,17 @@ export default class GroupService implements IGroupService {
         };
       }
 
+      let actionStatusAccepted = false;
       const updatePayload: Partial<GroupInviteBasicDataModel> = {};
       switch (model.status) {
         case GroupInviteStatus.ACCEPTED:
           updatePayload.status = GroupInviteStatus.ACCEPTED;
           updatePayload.updatedBy = this.currentUserGuid;
+          actionStatusAccepted = true;
           break;
         case GroupInviteStatus.DECLINED:
           updatePayload.status = GroupInviteStatus.DECLINED;
+          updatePayload.isActive = false;
           updatePayload.updatedBy = this.currentUserGuid;
           break;
       }
@@ -280,12 +303,27 @@ export default class GroupService implements IGroupService {
           where: {
             chatId: chat.id,
             invitedUserId: user.id,
+            status: GroupInviteStatus.PENDING,
             isActive: true,
             isDeleted: false,
           },
           returning: true,
         }
       );
+
+      if (actionStatusAccepted) {
+        const participantModel: ChatParticipantDataModel = {
+          chatId: chat.id,
+          userId: user.id,
+          isActive: true,
+          isDeleted: false,
+          createdBy: this.currentUserGuid,
+        };
+
+        const { ...dbModel } = participantModel;
+
+        await ChatParticipantModel.create(dbModel);
+      }
 
       const response = updatedRows[0] as unknown as GroupInviteDto;
 
@@ -303,6 +341,64 @@ export default class GroupService implements IGroupService {
           success: false,
           status: 400,
           message: "Some error occurred while updating the action",
+        };
+      }
+    } catch (error) {
+      return ErrorHandler.Handle(
+        error,
+        "DATABASE_ERROR",
+        400,
+        "Some error occurred while sending group invitation"
+      );
+    }
+  }
+
+  async groupMember(chatId: number): Promise<Response<GroupMemberDto[]>> {
+    try {
+      const user = await UserModel.findByPk(this.currentUserId) as unknown as UserDto;
+
+      if (!user) {
+        return {
+          success: false,
+          status: 400,
+          message: "User not found.",
+        };
+      }
+
+      const isCurrentUserGroupMember = await ChatParticipantModel.findOne(({where: {chatId: chatId, userId: user.id}}));
+
+      if(!isCurrentUserGroupMember){
+        return {
+          success: false,
+          status: 401,
+          message: "Unauthorize! You are not a member of this group.",
+        };
+      }
+
+      const response = (await sequelize.query(
+        `select u.id as userId, (u.firstName+' '+u.lastName) as fullName, u.profilePicture as profilePicture, cp.isAdmin as isAdmin from chat_participants as cp
+         left join users as u on u.id = cp.userId
+         left join chats as c on c.id = cp.chatId
+         where c.id = ${chatId} and c.type = 'G' and u.isActive = 1 and u.isDeleted = 0 and cp.isActive = 1 and cp.isDeleted = 0 and c.isActive = 1 and c.isDeleted = 0; `,
+        {
+          plain: false,
+          raw: true,
+          type: QueryTypes.SELECT,
+        }
+      )) as unknown as GroupMemberDto[];
+
+      if (response) {
+        return {
+          success: true,
+          status: 200,
+          message: "Member fetched successfully.",
+          data: response,
+        };
+      } else {
+        return {
+          success: false,
+          status: 400,
+          message: "Some error occurred while fetching members",
         };
       }
     } catch (error) {

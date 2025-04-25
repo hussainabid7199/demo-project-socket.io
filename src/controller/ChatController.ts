@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { inject } from "inversify";
 import {
   controller,
+  httpGet,
   httpPost,
   interfaces,
   request,
@@ -22,6 +23,7 @@ import { ChatActionDataModel } from "../models/ChatDataModel";
 import { GroupDataModel } from "../models/GroupDataModel";
 import GroupSchema from "../schema/GroupSchema";
 import { errorMessage } from "../utils/error-logging";
+import { ContactDto } from "../dtos/ContactDto";
 
 @controller("/chat")
 export class ChatController implements interfaces.Controller {
@@ -100,10 +102,10 @@ export class ChatController implements interfaces.Controller {
 
       if (response && response.data && response.success) {
         await t.commit();
-        return res.status(200).json(response);
+        return res.status(response.status || 200).json(response);
       } else {
         await t.rollback();
-        return res.status(400).json(response);
+        return res.status(response.status || 400).json(response);
       }
     } catch (ex) {
       await t.rollback();
@@ -128,10 +130,10 @@ export class ChatController implements interfaces.Controller {
 
       if (response && response.data && response.success) {
         await t.commit();
-        return res.status(200).json(response);
+        return res.status(response.status || 200).json(response);
       } else {
         await t.rollback();
-        return res.status(400).json(response);
+        return res.status(response.status || 400).json(response);
       }
     } catch (ex) {
       await t.rollback();
@@ -139,6 +141,29 @@ export class ChatController implements interfaces.Controller {
       return res.status(500).json({
         success: false,
         message: message || "Internal server error",
+        error: "Internal server error",
+      });
+    }
+  }
+
+  @httpGet("/contact", authentication)
+  public async messages(
+    @request() req: Request,
+    @response() res: Response
+  ): Promise<Response<ContactDto[] | void>> {
+    try {
+      const response = await this.chatService.getContact();
+
+      if (response && response.data && response.success) {
+        return res.status(response.status || 200).json(response);
+      } else {
+        return res.status(response.status || 400).json(response);
+      }
+    } catch (error) {
+      console.error("Error while fetching the messages:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
         error: "Internal server error",
       });
     }

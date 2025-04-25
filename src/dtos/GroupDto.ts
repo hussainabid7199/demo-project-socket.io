@@ -11,3 +11,10 @@ export default interface GroupInviteDto{
   isActive: boolean;
   isDeleted: boolean;
 }
+
+export interface GroupMemberDto {
+  userId: number;
+  fullName?: string;
+  profilePicture?: string;
+  isAdmin: boolean;
+}

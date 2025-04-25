@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { inject } from "inversify";
 import {
   controller,
+  httpGet,
   httpPatch,
   httpPost,
   interfaces,
@@ -18,10 +19,14 @@ import IMiscellaneousService from "../services/interface/IMiscellaneousService";
 import { CurrentUserDto } from "../dtos/UserDto";
 import { validateSchema } from "../middleware/validation.middleware";
 import IGroupService from "../services/interface/IGroupService";
-import { GroupInviteActionDataModel, GroupInviteDataModel } from "../models/GroupDataModel";
-import GroupInviteSchema from "../schema/GroupInviteSchema";
+import {
+  GroupInviteActionDataModel,
+  GroupInviteDataModel,
+} from "../models/GroupDataModel";
 import { errorMessage } from "../utils/error-logging";
-import GroupInviteActionSchema from "../schema/GroupInviteSchema";
+import GroupInviteActionSchema from "../schema/GroupInviteActionSchema";
+import GroupInviteSchema from "../schema/GroupInviteSchema";
+import { GroupMemberDto } from "../dtos/GroupDto";
 
 @controller("/group")
 export class GroupController implements interfaces.Controller {
@@ -46,6 +51,37 @@ export class GroupController implements interfaces.Controller {
     this.currentUserGuid = this.currentUser.guid;
   }
 
+  @httpGet("/member", authentication)
+  public async member(
+    @request() req: Request,
+    @response() res: Response
+  ): Promise<Response<GroupMemberDto | void>> {
+    try {
+      const { chatId } = req.body;
+
+      if (!chatId || !this.currentUserId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid request payload" });
+      }
+
+      const response = await this.groupService.groupMember(chatId);
+
+      if (response && response.data && response.success) {
+        return res.status(response.status || 200).json(response);
+      } else {
+        return res.status(response.status || 400).json(response);
+      }
+    } catch (ex) {
+      const { message } = errorMessage(ex);
+      return res.status(500).json({
+        success: false,
+        message: message || "Internal server error",
+        error: "Internal server error",
+      });
+    }
+  }
+
   @httpPost("/invite", authentication, validateSchema(GroupInviteSchema))
   public async invite(
     @request() req: Request,
@@ -59,10 +95,10 @@ export class GroupController implements interfaces.Controller {
 
       if (response && response.data && response.success) {
         await t.commit();
-        return res.status(200).json(response);
+        return res.status(response.status || 200).json(response);
       } else {
         await t.rollback();
-        return res.status(400).json(response);
+        return res.status(response.status || 400).json(response);
       }
     } catch (ex) {
       await t.rollback();
@@ -86,9 +122,9 @@ export class GroupController implements interfaces.Controller {
       const response = await this.groupService.invitationAction(model);
 
       if (response && response.data && response.success) {
-        return res.status(200).json(response);
+        return res.status(response.status || 200).json(response);
       } else {
-        return res.status(400).json(response);
+        return res.status(response.status || 400).json(response);
       }
     } catch (ex) {
       const { message } = errorMessage(ex);

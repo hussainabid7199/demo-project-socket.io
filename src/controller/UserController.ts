@@ -30,9 +30,9 @@ export class UserController implements interfaces.Controller {
     try {
       const response = await this.userService.get();
       if (response && response.data && response.status) {
-        res.status(200).send(response);
+        res.status(response.status || 200).send(response);
       } else {
-        res.status(400).send(response);
+        res.status(response.status || 400).send(response);
       }
     } catch (ex) {
       const { message, errorCode} = errorMessage(ex);
@@ -52,9 +52,9 @@ export class UserController implements interfaces.Controller {
       const id = +req.params.id;
       const response = await this.userService.getById(id);
       if (response && response.data && response.success) {
-        res.status(200).send(response);
+        res.status(response.status || 200).send(response);
       } else {
-        res.status(400).send(response);
+        res.status(response.status || 400).send(response);
       }
     } catch (ex) {
       const { message, errorCode} = errorMessage(ex);
@@ -75,9 +75,9 @@ export class UserController implements interfaces.Controller {
       const guid = req.params.guid;
       const response = await this.userService.getByGuid(id, guid);
       if (response && response.data && response.success) {
-        res.status(200).send(response);
+        res.status(response.status || 200).send(response);
       } else {
-        res.status(400).send(response);
+        res.status(response.status || 400).send(response);
       }
     } catch (ex) {
       const { message, errorCode} = errorMessage(ex);

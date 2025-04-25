@@ -15,7 +15,7 @@ import { SocketServer } from "../socket";
 import { ChatEventEnum } from "../socket/constant";
 import UserModel from "../database/models/UserModel";
 import ChatModel from "../database/models/ChatModel";
-import { Optional } from "sequelize";
+import { Optional, QueryTypes } from "sequelize";
 import { generateUniqueId } from "../helpers/generate-unique-id";
 import ChatParticipantModel from "../database/models/ChatParticipantModel";
 import {
@@ -26,6 +26,8 @@ import {
 } from "../enums/action.enum";
 import { GroupDataModel } from "../models/GroupDataModel";
 import ErrorHandler from "../exceptions/error-handler";
+import { ContactDto } from "../dtos/ContactDto";
+import sequelize from "../database/connection";
 
 @injectable()
 export default class ChatService implements IChatService {
@@ -391,6 +393,75 @@ export default class ChatService implements IChatService {
         "DATABASE_ERROR",
         400,
         "Some error occurred while creating chat action"
+      );
+    }
+  }
+
+  async getContact(): Promise<Response<ContactDto[]>> {
+    try {
+      const user = await UserModel.findByPk(this.currentUserId);
+
+      if (!user) {
+        return {
+          success: false,
+          status: 400,
+          message: "User not found.",
+        };
+      }
+
+      const response = (await sequelize.query(
+        `select distinct 
+	          c.id as chatId,
+	          c.roomId as roomId,
+	          c.type as chatType,
+              
+	          CASE WHEN c.type = 'P' THEN (u.firstName+' '+u.lastName) else null end as fullName,
+	          CASE WHEN c.type = 'P' THEN u.id else null end as userId,
+	          CASE WHEN c.type = 'P' THEN profilePicture else null end as profilePicture,
+              
+	          CASE WHEN c.type = 'G' THEN c.name else null end as groupName,
+	          CASE WHEN c.type = 'G' THEN c.description else null end as groupDescription
+  
+              from 
+                  
+              chat_participants as cp
+              join chats as c on cp.chatId = c.id
+              left join users as u on u.id = cp.userId
+                  
+              where 
+                  
+              cp.isActive = 1 and
+              cp.isDeleted = 0 and 
+              c.isActive = 1 and
+              c.isDeleted = 0 and
+              cp.userId != ${this.currentUserId};`,
+        {
+          plain: false,
+          raw: true,
+          type: QueryTypes.SELECT,
+        }
+      )) as unknown as ContactDto[];
+
+      if (response) {
+        return {
+          success: true,
+          status: 200,
+          message: "Invitation sent successfully.",
+          data: response,
+        };
+      } else {
+        return {
+          success: false,
+          status: 400,
+          message: "Some error occurred while sending invitation",
+        };
+      }
+    } catch (error) {
+      return ErrorHandler.Handle(
+        error,
+        "DATABASE_ERROR",
+        400,
+        "Some error occurred while sending group invitation"
       );
     }
   }
