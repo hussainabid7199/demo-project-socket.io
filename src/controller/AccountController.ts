@@ -56,7 +56,9 @@ export class AccountController implements interfaces.Controller {
           ).save();
         }
         await t.commit();
-        res.status(200).send(response);
+        res.status(response.status || 200).send(response);
+      }else{
+        res.status(response.status || 400).send(response);
       }
     } catch (ex) {
       await t.rollback();

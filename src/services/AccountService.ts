@@ -39,7 +39,11 @@ export default class AccountService implements IAccountService {
 
       const userResponse = result?.dataValues;
       if (!userResponse) {
-        throw new Error("Invalid username or password");
+        return {
+          success: true,
+          status: 400,
+          message: "Invalid username or password",
+        };
       }
 
       const isPasswordValid = await BcryptUtils.comparePassword(
@@ -48,7 +52,11 @@ export default class AccountService implements IAccountService {
       );
 
       if (!isPasswordValid) {
-        throw new Error("Invalid username or password");
+        return {
+          success: true,
+          status: 400,
+          message: "Invalid username or password",
+        };
       }
 
       const fullName = `${userResponse.firstName} ${userResponse.lastName}`;
