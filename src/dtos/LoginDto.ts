@@ -1,6 +1,5 @@
 interface LoginBasicDto {
   id: number;
-  guid: string;
   email: string;
   password: string;
   isActive: boolean;

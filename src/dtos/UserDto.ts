@@ -1,6 +1,5 @@
 export default interface UserDto {
-  id: number;
-  guid: string;
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -11,8 +10,7 @@ export default interface UserDto {
 }
 
 export interface UserBasicDto {
-  id: number;
-  guid: string;
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -22,8 +20,7 @@ export interface UserBasicDto {
 }
 
 export interface CurrentUserDto {
-  id: number;
-  guid: string;
+  id: string;
   email: string;
   fullName: string;
 }

@@ -22,32 +22,32 @@ export class SocketServer {
           );
         }
 
-        const { id, guid, email, fullName } = jwt.verify(
+        const { id, email, fullName } = jwt.verify(
           token,
           process.env.JWT_SECRET!
         ) as CurrentUserDto;
 
-        if (!id || !guid || !email || !fullName) {
+        if (!id || !email || !fullName) {
           throw new CustomError(
             "Un-authorized handshake. Token is invalid",
             401
           );
         }
 
-        const socketUser: CurrentUserDto = { id, guid, email, fullName };
+        const socketUser: CurrentUserDto = { id,  email, fullName };
         socket.user = socketUser as CurrentUserDto;
-        socket.join(guid);
+        socket.join(id);
         socket.emit(ChatEventEnum.CONNECTED_EVENT);
-        console.log("user connected 🗼. user-unique-id: ", guid);
+        console.log("user connected 🗼. user-unique-id: ", id);
 
         this.mountJoinChatEvent(socket);
         this.mountParticipantTypingEvent(socket);
         this.mountParticipantStoppedTypingEvent(socket);
 
         socket.on(ChatEventEnum.DISCONNECT_EVENT, () => {
-          console.log("user has disconnected 🚫. user-unique-id: " + socket?.user?.guid);
-          if (socket?.user?.guid) {
-            socket.leave(socket.user.guid);
+          console.log("user has disconnected 🚫. user-unique-id: " + socket?.user?.id);
+          if (socket?.user?.id) {
+            socket.leave(socket.user.id);
           }
         });
       } catch (error) {

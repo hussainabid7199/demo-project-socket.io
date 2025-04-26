@@ -13,7 +13,6 @@ const generateToken = async (user: CurrentUserDto,
   const token = await jwt.sign(
     {
       id: user.id,
-      guid: user.guid,
       email: user.email,
       fullName: user.fullName
     },

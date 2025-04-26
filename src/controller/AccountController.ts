@@ -3,7 +3,6 @@ import { Request, Response } from "express";
 import { inject } from "inversify";
 import {
   controller,
-  httpGet,
   httpPost,
   interfaces,
   request,
@@ -28,18 +27,6 @@ export class AccountController implements interfaces.Controller {
     this._accountService = accountService;
   }
 
-  @httpGet("/health")
-  public async account(
-    @request() req: Request,
-    @response() res: Response
-  ): Promise<void> {
-    res.status(200).send({
-      success: true,
-      message: "Health OK!",
-      data: "Health OK!",
-    });
-  }
-
   @httpPost("/login", validateSchema(LoginSchema))
   public async login(
     @request() req: Request,
@@ -53,7 +40,7 @@ export class AccountController implements interfaces.Controller {
 
       if (response && response.success && response.data) {
         const user = await UserModel.findOne({
-          where: { guid: response.data.guid },
+          where: { id: response.data.id },
         });
 
         if (user && user.dataValues && client_ip) {

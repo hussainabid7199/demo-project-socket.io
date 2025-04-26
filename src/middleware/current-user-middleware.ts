@@ -15,7 +15,6 @@ const CurrentUserContext = (
     const currentUser = jwt.payload as CurrentUserDto;
     storageContext.run(() => {
       storageContext.set("id", currentUser.id);
-      storageContext.set("guid", currentUser.guid);
       storageContext.set("email", currentUser.email);
       storageContext.set("fullName", currentUser.fullName);
       next();

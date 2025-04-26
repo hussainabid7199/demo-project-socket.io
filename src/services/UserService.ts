@@ -2,28 +2,17 @@ import { inject, injectable } from "inversify";
 import { TYPES } from "../config/types";
 import Response from "../dtos/Response";
 import IUserService from "./interface/IUserService";
-import { CurrentUserDto, UserBasicDto } from "../dtos/UserDto";
+import { UserBasicDto } from "../dtos/UserDto";
 import UserModel from "../database/models/UserModel";
-import CustomError from "../exceptions/custom-error";
 import { SocketServer } from "../socket";
-import IMiscellaneousService from "./interface/IMiscellaneousService";
 
 @injectable()
 export default class UserService implements IUserService {
-  private readonly miscellaneousService: IMiscellaneousService;
-  private readonly currentUser: CurrentUserDto;
-  private readonly currentUserGuid: string;
-  private readonly currentUserId: number;
   constructor(
-    @inject(TYPES.SocketServer) private io: SocketServer,
-    @inject(TYPES.IMiscellaneousService)
-    miscellaneousService: IMiscellaneousService,
+    @inject(TYPES.SocketServer) private io: SocketServer
   )
      {
-      this.miscellaneousService = miscellaneousService;
-      this.currentUser = this.miscellaneousService.currentUser();
-      this.currentUserGuid = this.currentUser.guid;
-      this.currentUserId = this.currentUser.id;
+
      }
 
   async get(): Promise<Response<UserBasicDto[]>> {
@@ -31,7 +20,6 @@ export default class UserService implements IUserService {
       where: { isActive: true, isDeleted: false },
       attributes: [
         "id",
-        "guid",
         "firstName",
         "lastName",
         "email",
@@ -39,13 +27,12 @@ export default class UserService implements IUserService {
         "isActive",
         "isDeleted",
       ],
-    })).filter((e)=> e.dataValues.guid != this.currentUserGuid);
+    }))
 
     const response: UserBasicDto[] = users.map((x) => {
       const user: UserBasicDto = x.dataValues;
       return {
         id: user.id,
-        guid: user.guid,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
@@ -71,12 +58,11 @@ export default class UserService implements IUserService {
     }
   }
 
-  async getById(id: number): Promise<Response<UserBasicDto>> {
+  async getById(id: string): Promise<Response<UserBasicDto>> {
     const user = await UserModel.findOne({
       where: { id: id, isActive: true, isDeleted: false },
       attributes: [
         "id",
-        "guid",
         "firstName",
         "lastName",
         "email",
@@ -87,39 +73,6 @@ export default class UserService implements IUserService {
     });
 
     const response: UserBasicDto = user?.dataValues;
-    if (response) {
-      return {
-        success: true,
-        data: response,
-      };
-    } else {
-      return {
-        success: false,
-        message: "Message failed",
-      };
-    }
-  }
-
-  async getByGuid(id: number, guid: string): Promise<Response<UserBasicDto>> {
-    const user = await UserModel.findOne({
-      where: { id: id, guid: guid, isActive: true, isDeleted: false },
-      attributes: [
-        "id",
-        "guid",
-        "firstName",
-        "lastName",
-        "email",
-        "profilePicture",
-        "isActive",
-        "isDeleted",
-      ],
-      raw: true
-    }) as UserBasicDto | null;
-
-    if(!user)
-      if (!user) throw new CustomError("User not found!", 400);
-
-    const response: UserBasicDto = user;
     if (response) {
       return {
         success: true,

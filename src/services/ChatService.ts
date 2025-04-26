@@ -1,364 +1,182 @@
 import { inject, injectable } from "inversify";
 import { TYPES } from "../config/types";
-import IChatService from "./interface/IChatService";
 import Response from "../dtos/Response";
-import ChatUserListDto, { ChatContactDto, ChatExistDto } from "../dtos/ChatDto";
-import IUserService from "./interface/IUserService";
-import ChatContactModel from "../database/models/ChatContactModel";
-import { ChatContactDataModel } from "../models/ChatDataModel";
-import { CurrentUserDto, UserBasicDto } from "../dtos/UserDto";
-import { ChatAction } from "../enums/chat.action.enum";
 import UserModel from "../database/models/UserModel";
-import IMiscellaneousService from "./interface/IMiscellaneousService";
 import { SocketServer } from "../socket";
-import { ChatEventEnum } from "../socket/constant";
+import IChatService from "./interface/IChatService";
+import { ChatDto } from "../dtos/ChatDto";
+import ChatModel from "../database/models/ChatModel";
+import { ChatDataModel } from "../models/ChatDataModel";
+import IMiscellaneousService from "./interface/IMiscellaneousService";
+import UserDto, { CurrentUserDto } from "../dtos/UserDto";
+import ChatParticipantModel from "../database/models/ChatParticipantModel";
+import { CreationAttributes } from "sequelize";
+import sequelize from "../database/connection";
+import { generateHashed } from "../utils/random-id-generator";
 
 @injectable()
 export default class ChatService implements IChatService {
-  private readonly userService: IUserService;
   private readonly miscellaneousService: IMiscellaneousService;
   private readonly currentUser: CurrentUserDto;
-  private readonly currentUserId: number;
-  private readonly currentUserGuid: string;
-
+  private readonly currentUserId: string;
   constructor(
     @inject(TYPES.SocketServer) private io: SocketServer,
-    @inject(TYPES.IUserService) userService: IUserService,
     @inject(TYPES.IMiscellaneousService)
     miscellaneousService: IMiscellaneousService
   ) {
-    this.userService = userService;
     this.miscellaneousService = miscellaneousService;
     this.currentUser = this.miscellaneousService.currentUser();
     this.currentUserId = this.currentUser.id;
-    this.currentUserGuid = this.currentUser.guid;
   }
 
-  // Max response time 25ms Min response time 19ms
-  async getChatContact(): Promise<Response<ChatUserListDto[]>> {
-    const result = await ChatContactModel.findAll({
-      where: {
-        currentUserId: this.currentUserId,
-        isActive: true,
-        isDeleted: false,
-      },
-      include: [
-        {
-          model: UserModel,
-          as: "user",
-          attributes: ["id", "guid", "firstName", "lastName"],
-        },
+  async get(): Promise<Response<ChatDto[]>> {
+    const chat = await ChatModel.findAll({
+      where: { isActive: true, isDeleted: false },
+    });
+
+    const response: ChatDto[] = chat.map((x) => {
+      const chat: ChatDto = x.dataValues;
+      return {
+        id: chat.id,
+        type: chat.type,
+        name: chat.name,
+        avatarUrl: chat.avatarUrl,
+        createdAt: chat.createdAt,
+        isActive: chat.isActive,
+        isDeleted: chat.isDeleted,
+      };
+    });
+
+    if (response) {
+      return {
+        success: true,
+        status: 200,
+        data: response,
+      };
+    } else {
+      return {
+        success: false,
+        status: 400,
+        message: "User not found",
+        data: [],
+      };
+    }
+  }
+
+  async getById(id: string): Promise<Response<ChatDto>> {
+    const user = await UserModel.findOne({
+      where: { id: id, isActive: true, isDeleted: false },
+      attributes: [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "profilePicture",
+        "isActive",
+        "isDeleted",
       ],
     });
 
-    const response: ChatUserListDto[] = result.map(
-      ({ dataValues: { user } }) => ({
-        id: user.id,
-        guid: user.guid,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      })
-    );
-
+    const response: ChatDto = user?.dataValues;
     if (response) {
       return {
         success: true,
-        status: 200,
-        message: "Chat contact listed successfully.",
         data: response,
       };
     } else {
       return {
         success: false,
-        status: 400,
-        message: "Failed to fetch chat contact list.",
+        message: "Message failed",
       };
     }
   }
 
-  async createChat(userId: number): Promise<Response<ChatContactDto>> {
-    const [existingUserResult, currentUserResult] = await Promise.all([
-      this.userService.getById(userId),
-      this.userService.getById(this.currentUserId),
-    ]);
+  async add(id: string, model: ChatDataModel): Promise<Response<ChatDto>> {
+    const t = await sequelize.transaction();
+    try {
+      model.createdBy = this.currentUserId;
+      model.updatedBy = this.currentUserId;
 
-    const existingUser = existingUserResult.data;
-    const currentUserExist = currentUserResult.data;
+      const selectUser = (await UserModel.findOne({
+        where: { id: id },
+        raw: true,
+      })) as UserDto | null;
 
-    if (!existingUser || !currentUserExist) {
-      return {
-        success: false,
-        status: 400,
-        message: "Some error occurred while creating chat",
-      };
-    }
+      if (!selectUser) {
+        throw new Error("User not found.");
+      }
 
-    const user: UserBasicDto = existingUser;
-    const currentUser: UserBasicDto = currentUserExist;
+      model.name = await generateHashed(this.currentUserId, selectUser.id);
 
-    const [existingChatWithCurrentUser, existingChatWithPassedUser] =
-      await Promise.all([
-        await ChatContactModel.findOne({
-          where: {
-            userId: user.id,
-            currentUserId: currentUser.id,
-            isActive: true,
-            isDeleted: false,
-          },
-          raw: true,
-        }),
-        await ChatContactModel.findOne({
-          where: {
-            userId: currentUser.id,
-            currentUserId: user.id,
-            isActive: true,
-            isDeleted: false,
-          },
-          raw: true,
-        }),
-      ]);
+      const { ...dbModel } = model;
+      const response: ChatDto = (await ChatModel.create(dbModel)).dataValues;
 
-    if (existingChatWithCurrentUser || existingChatWithPassedUser) {
-      return {
-        success: false,
-        status: 400,
-        message: "Chat already exist.",
-      };
-    }
+      type ChatParticipantDataModel = CreationAttributes<ChatParticipantModel>;
 
-    const model: ChatContactDataModel = {
-      userId: user.id || 0,
-      currentUserId: this.currentUserId,
-      isArchived: false,
-      isBlocked: false,
-      isMuted: false,
-      createdBy: currentUser.guid,
-    };
-
-    const { ...dbModel } = model;
-
-    this.io.emitSocketEvent(
-      this.currentUserGuid,
-      ChatEventEnum.NEW_CHAT_EVENT,
-      dbModel
-    );
-
-    const response = (await ChatContactModel.create(dbModel)).dataValues;
-
-    if (response) {
-      return {
-        success: true,
-        status: 200,
-        message: "Chat created successfully!",
-        data: response,
-      };
-    } else {
-      return {
-        success: false,
-        status: 400,
-        message: "Failed to create chat.",
-      };
-    }
-  }
-
-  async chatExist(userId: number): Promise<Response<ChatExistDto>> {
-    const [existingUserResult, currentUserResult] = await Promise.all([
-      this.userService.getById(userId),
-      this.userService.getById(this.currentUserId),
-    ]);
-
-    const existingUser = existingUserResult.data;
-    const currentUserExist = currentUserResult.data;
-
-    if (!existingUser || !currentUserExist) {
-      return {
-        success: false,
-        status: 400,
-        message: "Some error occurred while creating chat",
-      };
-    }
-
-    const user: UserBasicDto = existingUser;
-    const currentUser: UserBasicDto = currentUserExist;
-
-    const [existingChatWithCurrentUser, existingChatWithPassedUser] =
-      await Promise.all([
-        (await ChatContactModel.findOne({
-          where: {
-            userId: user.id,
-            currentUserId: currentUser.id,
-            isActive: true,
-            isDeleted: false,
-          },
-          raw: true,
-        })) as ChatContactDto | null,
-        (await ChatContactModel.findOne({
-          where: {
-            userId: currentUser.id,
-            currentUserId: user.id,
-            isActive: true,
-            isDeleted: false,
-          },
-        })) as ChatContactDto | null,
-      ]);
-
-    if (!existingChatWithCurrentUser && !existingChatWithPassedUser) {
-      return {
-        success: false,
-        status: 400,
-        message: "Chat don't exist.",
-      };
-    }
-
-    let chatIdOfCurrentUser: number = 0;
-    let chatIdOfPassedUser: number = 0;
-    let chatId: number = 0;
-    let chatCurrentUserId: number = 0;
-    let chatPassedUserId: number = 0;
-
-    if (existingChatWithCurrentUser) {
-      chatIdOfCurrentUser = existingChatWithCurrentUser.id;
-      chatCurrentUserId = existingChatWithCurrentUser.currentUserId;
-      chatPassedUserId = existingChatWithCurrentUser.userId;
-    }
-
-    if (existingChatWithPassedUser) {
-      chatIdOfPassedUser = existingChatWithPassedUser.id;
-      chatCurrentUserId = existingChatWithPassedUser.currentUserId;
-      chatPassedUserId = existingChatWithPassedUser.userId;
-    }
-
-    chatId = chatIdOfPassedUser || chatIdOfCurrentUser;
-
-    const response: ChatExistDto = {
-      chatId: chatId,
-      chatCurrentUserId: chatCurrentUserId,
-      chatPassedUserId: chatPassedUserId,
-    };
-
-    if (
-      response &&
-      response.chatId &&
-      response.chatCurrentUserId &&
-      response.chatPassedUserId
-    ) {
-      return {
-        success: false,
-        status: 200,
-        message: "Chat exist.",
-        data: response,
-      };
-    } else {
-      return {
-        success: false,
-        status: 400,
-        message: "Chat don't exist.",
-      };
-    }
-  }
-
-  async chatAction(
-    userId: number,
-    currentUserId: number,
-    action: string
-  ): Promise<Response<ChatContactDto>> {
-    const [existingUserResult, currentUserResult] = await Promise.all([
-      this.userService.getById(userId),
-      this.userService.getById(currentUserId),
-    ]);
-
-    const existingUser = existingUserResult.data;
-    const currentUserExist = currentUserResult.data;
-
-    if (!existingUser || !currentUserExist) {
-      return {
-        success: false,
-        status: 400,
-        message: "Some error occurred while creating chat",
-      };
-    }
-
-    const user: UserBasicDto = existingUser;
-    const currentUser: UserBasicDto = currentUserExist;
-    const updatePayload: Partial<ChatContactDto> = {};
-    const isChatAvailable: ChatContactDto = (
-      await ChatContactModel.findOne({
-        where: {
-          userId: user.id,
-          currentUserId: currentUser.id,
+      const participants: ChatParticipantDataModel[] = [
+        {
+          chatId: response.id,
+          userId: this.currentUserId,
+          isAdmin: false,
+          isMuted: false,
+          isArchived: false,
+          isBlocked: false,
+          createdBy: this.currentUserId,
+          updatedBy: this.currentUserId,
           isActive: true,
           isDeleted: false,
         },
-      })
-    )?.dataValues;
+        {
+          chatId: response.id,
+          userId: selectUser.id,
+          isAdmin: false,
+          isMuted: false,
+          isArchived: false,
+          isBlocked: false,
+          createdBy: this.currentUserId,
+          updatedBy: this.currentUserId,
+          isActive: true,
+          isDeleted: false,
+        },
+      ];
 
-    if (!isChatAvailable) {
+      const chatParticipants = await ChatParticipantModel.bulkCreate(
+        participants,
+        {
+          returning: true,
+        }
+      );
+
+      if (!chatParticipants) {
+        await t.rollback();
+        return {
+          success: false,
+          status: 400,
+          message: "Some error occurred while creating chat participants",
+        };
+      }
+
+      if (response) {
+        await t.commit();
+        return {
+          success: true,
+          status: 200,
+          data: response,
+        };
+      } else {
+        await t.rollback();
+        return {
+          success: false,
+          status: 400,
+          message: "Chat not found",
+        };
+      }
+    } catch (error) {
+      await t.rollback();
+      console.log(error);
       return {
         success: false,
-        status: 400,
-        message: "Chat don't exist",
-      };
-    }
-
-    switch (action) {
-      case ChatAction.BLOCK:
-        if (isChatAvailable.isBlocked) {
-          return {
-            success: false,
-            status: 400,
-            message: "Already blocked",
-          };
-        } else {
-          updatePayload.isBlocked = true;
-          isChatAvailable.isBlocked = true;
-        }
-        break;
-
-      case ChatAction.MUTE:
-        if (isChatAvailable.isMuted) {
-          return {
-            success: false,
-            status: 400,
-            message: "Already muted",
-          };
-        } else {
-          updatePayload.isMuted = true;
-          isChatAvailable.isMuted = true;
-        }
-        break;
-
-      case ChatAction.ARCHIVE:
-        if (isChatAvailable.isArchived) {
-          return {
-            success: false,
-            status: 400,
-            message: "Already archived",
-          };
-        } else {
-          updatePayload.isArchived = true;
-          isChatAvailable.isArchived = true;
-        }
-        break;
-    }
-
-    const response = await ChatContactModel.update(updatePayload, {
-      where: {
-        id: isChatAvailable.id,
-      },
-    });
-
-    if (response) {
-      return {
-        success: true,
-        status: 200,
-        message: "Chat created successfully!",
-        data: isChatAvailable,
-      };
-    } else {
-      return {
-        success: false,
-        status: 400,
-        message: "Failed to create chat.",
+        message: "Some error occurred!",
       };
     }
   }

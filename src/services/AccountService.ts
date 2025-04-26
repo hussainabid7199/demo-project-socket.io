@@ -23,7 +23,6 @@ export default class AccountService implements IAccountService {
         },
         attributes: [
           "id",
-          "guid",
           "email",
           "firstName",
           "lastName",
@@ -52,7 +51,6 @@ export default class AccountService implements IAccountService {
       const fullName = `${userResponse.firstName} ${userResponse.lastName}`;
       const currentUser: CurrentUserDto = {
         id: userResponse.id,
-        guid: userResponse.guid,
         email: userResponse.email,
         fullName: fullName
       }
@@ -67,7 +65,6 @@ export default class AccountService implements IAccountService {
 
       const response: UserDto = {
         id: usersData.id,
-        guid: usersData.guid,
         firstName: usersData.firstName,
         lastName: usersData.lastName,
         email: usersData.email,

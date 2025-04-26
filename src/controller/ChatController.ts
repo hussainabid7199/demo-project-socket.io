@@ -10,139 +10,101 @@ import {
   response,
 } from "inversify-express-utils";
 import { TYPES } from "../config/types";
-import IChatService from "../services/interface/IChatService";
-import ChatDto from "../dtos/ChatDto";
+import { UserBasicDto } from "../dtos/UserDto";
 import { authentication } from "../middleware/authentication.middleware";
-import sequelize from "../database/connection";
-import IUserService from "../services/interface/IUserService";
-import ChatUserListDto from "../dtos/ChatDto";
-import IMiscellaneousService from "../services/interface/IMiscellaneousService";
-import { CurrentUserDto } from "../dtos/UserDto";
+import IChatService from "../services/interface/IChatService";
+import { ChatDataModel } from "../models/ChatDataModel";
+import { SocketServer } from "../socket";
+import { ChatEventEnum } from "../socket/constant";
 
 @controller("/chat")
 export class ChatController implements interfaces.Controller {
   private readonly chatService: IChatService;
-  private readonly userService: IUserService;
-  private readonly miscellaneousService: IMiscellaneousService;
-  private readonly currentUser: CurrentUserDto;
-  private readonly currentUserId: number;
-  private readonly currentUserGuid: string;
 
   constructor(
-    @inject(TYPES.IChatService) chatService: IChatService,
-    @inject(TYPES.IUserService) userService: IUserService,
-    @inject(TYPES.IMiscellaneousService)
-    miscellaneousService: IMiscellaneousService
+    @inject(TYPES.SocketServer) private io: SocketServer,
+    @inject(TYPES.IChatService) chatService: IChatService
   ) {
     this.chatService = chatService;
-    this.userService = userService;
-    this.miscellaneousService = miscellaneousService;
-    this.currentUser = this.miscellaneousService.currentUser();
-    this.currentUserId = this.currentUser.id;
-    this.currentUserGuid = this.currentUser.guid;
   }
 
-  @httpGet("/contact", authentication)
-  public async contact(
+  @httpGet("/", authentication)
+  public async get(
     @request() req: Request,
     @response() res: Response
-  ): Promise<Response<ChatUserListDto | void>> {
+  ): Promise<UserBasicDto[] | void> {
     try {
-      const userExist = await this.userService.getByGuid(this.currentUserId, this.currentUserGuid);
-
-      if (!userExist) {
-        return res
-          .status(400)
-          .json({ success: false, message: "User does not exist" });
-      }
-
-      const response = await this.chatService.getChatContact();
-
-      if (response && response.data && response.success) {
-        return res.status(200).json(response);
+      const response = await this.chatService.get();
+      if (response && response.data && response.status) {
+        res.status(200).send(response);
       } else {
-        return res.status(400).json(response);
+        res.status(400).send(response);
       }
     } catch (error) {
-      console.error("Error while fetching contact:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Internal server error",
-        error: "Internal server error",
+      res.status(400).send({
+        message: "Try again!",
+        error: error,
       });
     }
   }
 
-  @httpPost("/create", authentication)
-  public async createChat(
+  @httpGet("/:id", authentication)
+  public async getById(
     @request() req: Request,
     @response() res: Response
-  ): Promise<Response<ChatDto | void>> {
-    const t = await sequelize.transaction();
+  ): Promise<UserBasicDto | void> {
     try {
-      const { userId } = req.body;
-
-      if (!userId || !this.currentUserId) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Invalid request payload" });
-      }
-
-      const response = await this.chatService.createChat(userId);
-
+      const id = req.params.id;
+      const response = await this.chatService.getById(id);
       if (response && response.data && response.success) {
-        await t.commit();
-        return res.status(200).json(response);
+        res.status(200).send(response);
       } else {
-        await t.rollback();
-        return res.status(400).json(response);
+        res.status(400).send(response);
       }
     } catch (error) {
-      await t.rollback();
-      console.error("Error while creating chat:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Internal server error",
-        error: "Internal server error",
+      res.status(400).send({
+        message: "Try again!",
+        error: error,
       });
     }
   }
 
-  @httpPost("/action", authentication)
-  public async chatAction(
+  @httpPost("/:id/:type", authentication)
+  public async addChat(
     @request() req: Request,
     @response() res: Response
-  ): Promise<Response<ChatDto | void>> {
-    const t = await sequelize.transaction();
+  ): Promise<UserBasicDto | void> {
     try {
-      const { userId, currentUserId, action } = req.body;
+      const model = req.body as ChatDataModel;
+      const selectedUserId: string = req.params.id;
+      const type: string = req.params.type;
 
-      if (!userId || !currentUserId) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Invalid request payload" });
+      model.type = type;
+
+      if (
+        !model ||
+        !model.type ||
+        (model.type.toUpperCase() !== "P" &&
+          model.type.toUpperCase() !== "G") ||
+        !selectedUserId
+      ) {
+        res.status(400).send({
+          message: "Try again!",
+          error: "Invalid model input",
+        });
       }
 
-      const response = await this.chatService.chatAction(
-        userId,
-        currentUserId,
-        action
-      );
-
+      const response = await this.chatService.add(selectedUserId, model);
+      this.io.emitSocketEvent(response?.data?.name || "", ChatEventEnum.NEW_CHAT_EVENT, response.data?.name);
       if (response && response.data && response.success) {
-        await t.commit();
-        return res.status(200).json(response);
+        res.status(200).send(response);
       } else {
-        await t.rollback();
-        return res.status(400).json(response);
+        res.status(400).send(response);
       }
     } catch (error) {
-      await t.rollback();
-      console.error("Error:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Internal server error",
-        error: "Internal server error",
+      res.status(400).send({
+        message: "Try again!",
+        error: error,
       });
     }
   }

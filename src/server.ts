@@ -70,16 +70,17 @@ export async function startServer(): Promise<void> {
     app.use(express.json({ limit: "16kb" }));
     app.use(express.urlencoded({ extended: true, limit: "16kb" }));
     app.use(CurrentUserContext);
-
-    app.get("/health", (_req: Request, res: Response) => {
-      res.status(200).send("OK");
+    app.set("io", io);
+    app.get("/health", (req: Request, res: Response) => {
+      res.status(200).send({
+        success: true,
+        message: "Server is healthy!",
+      });
     });
-
     app.use((req, res, next) => {
       console.log(`📥 ${req.method} ${req.url} | 🔊 Port: ${PORT} | 👷 PID: ${process.pid}`);
       next();
     });
-    app.set("io", io);
   });
 
   inversifyServer.setErrorConfig((app) => {

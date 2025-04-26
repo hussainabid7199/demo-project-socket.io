@@ -1,33 +1,24 @@
-export default interface ChatUserListDto {
-  id: number;
-  guid: string;
-  firstName: string;
-  lastName: string;
-}
-
-export interface MessageDto {
-  userId: string;
-  socketId: string;
-  message: string;
-}
-
-export interface ChatContactDto {
-  id: number;
-  userId: number;
-  currentUserId: number;
-  isMuted: boolean;
-  isArchived: boolean;
-  isBlocked: boolean;
+export interface ChatDto {
+  id: string;
+  type: string;
+  name: string;
+  avatarUrl?: string;
   createdAt: Date;
-  createdBy: string;
+  createdBy?: string;
   updatedAt?: Date;
   updatedBy?: string;
   isActive: boolean;
   isDeleted: boolean;
 }
 
-export interface ChatExistDto {
-  chatId: number;
-  chatCurrentUserId: number;
-  chatPassedUserId: number;
+export interface ChatParticipantDto {
+  chatId: string;
+  userId: string;
+  isAdmin?: boolean;
+  isMuted?: boolean;
+  isArchived?: boolean;
+  isBlocked?: boolean;
+  blockedBy?: string | null;
+  createdBy?: string;
+  updatedBy?: string;
 }
