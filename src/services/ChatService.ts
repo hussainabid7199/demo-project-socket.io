@@ -426,7 +426,7 @@ export default class ChatService implements IChatService {
                   
             chat_participants as cp
             join chats as c on cp.chatId = c.id
-            left join users as u on u.id = cp.userId
+            join users as u on u.id = cp.userId
                   
             where 
                   
@@ -434,7 +434,7 @@ export default class ChatService implements IChatService {
             cp.isDeleted = 0 and 
             c.isActive = 1 and
             c.isDeleted = 0 and
-            cp.userId != ${this.currentUserId};`,
+            cp.userId != ${this.currentUserId} AND C.ID IN(SELECT DISTINCT chatId FROM chat_participants P  WHERE P.userId = ${this.currentUserId})`,
         {
           plain: false,
           raw: true,
