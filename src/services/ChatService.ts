@@ -422,19 +422,19 @@ export default class ChatService implements IChatService {
 	          CASE WHEN c.type = 'G' THEN c.name else null end as groupName,
 	          CASE WHEN c.type = 'G' THEN c.description else null end as groupDescription
   
-              from 
+            from 
                   
-              chat_participants as cp
-              join chats as c on cp.chatId = c.id
-              left join users as u on u.id = cp.userId
+            chat_participants as cp
+            join chats as c on cp.chatId = c.id
+            left join users as u on u.id = cp.userId
                   
-              where 
+            where 
                   
-              cp.isActive = 1 and
-              cp.isDeleted = 0 and 
-              c.isActive = 1 and
-              c.isDeleted = 0 and
-              cp.userId != ${this.currentUserId};`,
+            cp.isActive = 1 and
+            cp.isDeleted = 0 and 
+            c.isActive = 1 and
+            c.isDeleted = 0 and
+            cp.userId != ${this.currentUserId};`,
         {
           plain: false,
           raw: true,

@@ -6,5 +6,5 @@ export const TYPES = {
   IMiscellaneousService: Symbol.for("IMiscellaneousService"),
   IChatService: Symbol.for("IChatService"),
   IGroupService: Symbol.for("IGroupService"),
-  // IMessageService: Symbol.for("IMessageService"),
+  IMessageService: Symbol.for("IMessageService"),
 };
