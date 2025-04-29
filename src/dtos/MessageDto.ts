@@ -1,10 +1,9 @@
 export interface MessageDto {
     id: number;
-    chatContactId: number;
-    groupId: number;
-    groupMemberId: number;
-    currentUserId: number;
+    chatId: number;
+    senderId: number;
     message: string;
+    messageType: string;
     createdAt: string;
     createdBy: string;
     updatedAt?: string; 

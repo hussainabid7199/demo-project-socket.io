@@ -20,6 +20,8 @@ import IMessageService from "../services/interface/IMessageService";
 import { validateSchema } from "../middleware/validation.middleware";
 import { MessageDataModel } from "../models/MessageDataModel";
 import MessageSchema from "../schema/MessageSchema";
+import { MessageDto } from "../dtos/MessageDto";
+import sequelize from "../database/connection";
 
 @controller("/message")
 export class MessageController implements interfaces.Controller {
@@ -82,18 +84,50 @@ export class MessageController implements interfaces.Controller {
   public async sendMessages(
     @request() req: Request,
     @response() res: Response
-  ): Promise<Response<ContactDto[] | void>> {
+  ): Promise<Response<MessageDto | void>> {
+    const t = await sequelize.transaction();
     try {
       const model: MessageDataModel = req.body;
       const response = await this.messageService.sendMessage(model);
 
       if (response && response.data && response.success) {
+        await t.commit();
         return res.status(response.status || 200).json(response);
       } else {
+        await t.rollback();
         return res.status(response.status || 400).json(response);
       }
     } catch (error) {
+      await t.rollback();
       console.error("Error while fetching the messages:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+        error: "Internal server error",
+      });
+    }
+  }
+
+  @httpPost("/delete", authentication)
+  public async deleteMessages(
+    @request() req: Request,
+    @response() res: Response
+  ): Promise<Response<ContactDto[] | void>> {
+    const t = await sequelize.transaction();
+    try {
+      const { chatId, messageId } = req.body;
+      const response = await this.messageService.deleteMessage(chatId, messageId);
+
+      if (response && response.data && response.success) {
+        await t.commit();
+        return res.status(response.status || 204).json(response);
+      } else {
+        await t.rollback();
+        return res.status(response.status || 400).json(response);
+      }
+    } catch (error) {
+      await t.rollback();
+      console.error("Error while deleting the messages:", error);
       return res.status(500).json({
         success: false,
         message: "Internal server error",
