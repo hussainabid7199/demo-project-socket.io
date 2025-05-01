@@ -36,6 +36,8 @@ export async function startServer(): Promise<void> {
       allowedHeaders: "*",
       methods: ["GET", "POST"],
       credentials: true,
+      preflightContinue: true,
+      optionsSuccessStatus: 200
     },
   });
 
@@ -72,11 +74,13 @@ export async function startServer(): Promise<void> {
     app.use(CurrentUserContext);
 
     app.get("/health", (_req: Request, res: Response) => {
-      res.status(200).send({status: 200, message: "ok"});
+      res.status(200).send({ status: 200, message: "ok" });
     });
 
     app.use((req, _res, next) => {
-      console.log(`📥 ${req.method} ${req.url} | 🔊 Port: ${PORT} | 👷 PID: ${process.pid}`);
+      console.log(
+        `📥 ${req.method} ${req.url} | 🔊 Port: ${PORT} | 👷 PID: ${process.pid}`
+      );
       next();
     });
     app.set("io", io);
@@ -100,7 +104,7 @@ export async function startServer(): Promise<void> {
         "Database Status": "✅ Connected successfully",
         "Worker Info": `🛠️ Worker PID ${process.pid}`,
         "Listening On": `🌐 http://localhost:${port}`,
-        "processMemoryStats (bytes)": processMemoryStats
+        "processMemoryStats (bytes)": processMemoryStats,
       });
     } catch (error) {
       console.error("Error during server startup:", error);

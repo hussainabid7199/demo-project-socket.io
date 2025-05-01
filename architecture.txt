@@ -1,0 +1,67 @@
+c:/abid-workspace/Socket.io/socket.io-demo-setup/
+├─] .env (ignored)
+├─] .env.development (ignored)
+├─] .env.local (ignored)
+├─] .env.production (ignored)
+├── .gitignore
+├── .sequelizerc
+├── .vscode/
+│   └── settings.json
+├─] dist/ (ignored)
+├── eslint.config.mjs
+├─] node_modules/ (ignored)
+├── package-lock.json
+├── package.json
+├── public/
+│   ├── index.html
+│   └── uploads/
+│       └─] profile-picture/ (ignored)
+├── src/
+│   ├── app.ts
+│   ├── config/
+│   │   ├── ioc.ts
+│   │   └── types.ts
+│   ├── context/
+│   │   └── async-storage-context.ts
+│   ├── controller/
+│   ├── database/
+│   │   ├── configuration/
+│   │   │   └── index.ts
+│   │   ├── connection.ts
+│   │   └── models/
+│   ├── db/
+│   │   ├── config.js
+│   │   ├── migrations/
+│   │   └── models/
+│   │       └── index.js
+│   ├── dtos/
+│   ├── enums/
+│   ├── exceptions/
+│   ├── helpers/
+│   │   ├── generate-unique-id.ts
+│   │   └── limiter.ts
+│   ├── jwt/
+│   │   ├── jwt-config.ts
+│   │   ├── jwt-payload.ts
+│   │   └── jwt-token.ts
+│   ├── middleware/
+│   ├── models/
+│   ├── params/
+│   ├── schema/
+│   ├── server.ts
+│   ├── services/
+│   │   ├── interface/
+│   ├── socket/
+│   ├── swagger.yaml
+│   ├── types/
+│   │   └── express.d.ts
+│   └── utils/
+│       ├── bcrypt.utils.ts
+│       ├── error-logging/
+│       │   └── index.ts
+│       ├── load-balancer/
+│       │   ├── cluster.ts
+│       │   └── proxy-server.ts
+│       └── multer/
+│           └── picture-upload.utils.ts
+└── tsconfig.json

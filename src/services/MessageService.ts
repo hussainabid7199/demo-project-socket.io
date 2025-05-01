@@ -19,9 +19,9 @@ import ChatModel from "../database/models/ChatModel";
 import ErrorHandler from "../exceptions/error-handler";
 import MessageModel from "../database/models/MessageModel";
 import { ChatEventEnum } from "../socket/constant";
-import { ChatType } from "../enums/action.enum";
+import { ChatType, DeleteActon } from "../enums/action.enum";
 import ChatParticipantModel from "../database/models/ChatParticipantModel";
-import { Op } from "sequelize";
+import { Op, Optional } from "sequelize";
 import ChatDto, { ChatParticipantDto } from "../dtos/ChatDto";
 import MessageEditModel from "../database/models/MessageEditModel";
 import MessageDeleteModel from "../database/models/MessageDeleteModel";
@@ -171,6 +171,37 @@ export default class MessageService implements IMessageService {
       }
 
       if (chat && chat.type === ChatType.PRIVATE) {
+        const participant = (await ChatParticipantModel.findOne({
+          where: {
+            chatId: chat.id,
+            userId: {
+              [Op.not]: [this.currentUserId],
+            },
+            isActive: true,
+            isDeleted: false,
+          },
+          raw: true,
+        })) as ChatParticipantDto | null;
+
+        if (!participant) {
+          return {
+            success: false,
+            status: 400,
+            message: "Receiver not found.",
+          };
+        }
+
+        this.io.emitSocketEvent(chat.roomId, ChatEventEnum.NEW_CHAT_EVENT, {
+          message: model.message,
+          messageType: model.messageType,
+          chatId: chat.id,
+          senderId: this.currentUserId,
+          receiverId: participant.userId,
+          chatType: ChatType.PRIVATE,
+        });
+      }
+
+      if (chat && chat.type === ChatType.GROUP) {
         const participant = (await ChatParticipantModel.findOne({
           where: {
             chatId: chat.id,
@@ -356,7 +387,8 @@ export default class MessageService implements IMessageService {
 
   async deleteMessage(
     chatId: number,
-    messageId: number
+    messageId: number,
+    action: string
   ): Promise<Response<PlainDto>> {
     try {
       const message = await MessageModel.findOne({
@@ -393,9 +425,77 @@ export default class MessageService implements IMessageService {
         };
       }
 
+      let isDeleteForEveryOne = false;
+      const participants = (await ChatParticipantModel.findAll({
+        where: { chatId: chat.id, isActive: true, isDeleted: false },
+      })) as unknown as ChatParticipantDto[];
+      const isCurrentUserParticipant = participants.filter(
+        (x) => x.userId === this.currentUserId
+      );
+      const updateDeletePayload: Partial<MessageDeleteDataModel> = {};
+      if (action === DeleteActon.DELETE_FOR_ME) {
+        if (!isCurrentUserParticipant) {
+          return {
+            success: false,
+            status: 400,
+            message: "Invalid participant.",
+          };
+        }
+
+        updateDeletePayload.messageId = message.dataValues.id;
+        updateDeletePayload.deletedBy = this.currentUserGuid;
+        updateDeletePayload.createdBy = this.currentUserGuid;
+
+        const deleteMessageStatus = await MessageDeleteModel.create(
+          updateDeletePayload
+        );
+
+        if (!deleteMessageStatus) {
+          return {
+            success: false,
+            status: 400,
+            message: "Some error occurred while deleting the message",
+          };
+        }
+      } else if (action === DeleteActon.DELETE_FOR_EVERY_ONE) {
+        if (
+          message.dataValues.senderId === this.currentUserId &&
+          message.dataValues.createdBy === this.currentUserGuid &&
+          isCurrentUserParticipant
+        ) {
+          const messageDeleteModel: MessageDeleteDataModel[] = [];
+          const messageModel: MessageDeleteDataModel[] = participants.map(
+            (x) => {
+              if (x.chatId === chat.id && x.userId === x.userId) {
+                return {
+                  messageId: message.dataValues.id | 0,
+                  createdBy: this.currentUserGuid,
+                  deletedBy: this.currentUserGuid,
+                } as MessageDeleteDataModel;
+              }
+            }
+          ) as unknown as MessageDeleteDataModel[];
+          messageDeleteModel.push(...messageModel);
+
+          const deleteMessageStatus = await MessageDeleteModel.bulkCreate(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            messageDeleteModel as unknown as Optional<any, string>[]
+          );
+
+          isDeleteForEveryOne = true;
+          if (!deleteMessageStatus) {
+            return {
+              success: false,
+              status: 400,
+              message: "Some error occurred while deleting the message",
+            };
+          }
+        }
+      }
+
       const updatePayload: Partial<MessageBasicDataModel> = {};
-      updatePayload.isActive = false;
-      updatePayload.isDeleted = true;
+      updatePayload.isActive = isDeleteForEveryOne ? false : true;
+      updatePayload.isDeleted = isDeleteForEveryOne ? true : false;
 
       const [affectedCount, updatedRows] = await MessageModel.update(
         updatePayload,
@@ -404,30 +504,13 @@ export default class MessageService implements IMessageService {
             id: message.dataValues.id,
             chatId: chat.id,
             isActive: true,
-            isDeleted: false,
+            isDeleted: false
           },
           returning: true,
         }
       );
 
       if (!affectedCount && !updatedRows) {
-        return {
-          success: false,
-          status: 400,
-          message: "Some error occurred while deleting the message",
-        };
-      }
-
-      const updateDeletePayload: Partial<MessageDeleteDataModel> = {};
-      updateDeletePayload.messageId = message.dataValues.id;
-      updateDeletePayload.deletedBy = this.currentUserGuid;
-      updateDeletePayload.createdBy = this.currentUserGuid;
-
-      const deleteMessageStatus = await MessageDeleteModel.create(
-        updateDeletePayload
-      );
-
-      if (!deleteMessageStatus) {
         return {
           success: false,
           status: 400,

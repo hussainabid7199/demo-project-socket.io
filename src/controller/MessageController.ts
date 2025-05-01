@@ -115,8 +115,8 @@ export class MessageController implements interfaces.Controller {
   ): Promise<Response<ContactDto[] | void>> {
     const t = await sequelize.transaction();
     try {
-      const { chatId, messageId } = req.body;
-      const response = await this.messageService.deleteMessage(chatId, messageId);
+      const { chatId, messageId, action } = req.body;
+      const response = await this.messageService.deleteMessage(chatId, messageId, action);
 
       if (response && response.data && response.success) {
         await t.commit();

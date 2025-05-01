@@ -7,5 +7,5 @@ export default interface IMessageService {
   sendMessage(model: MessageDataModel): Promise<Response<MessageDto>>;
   message(chatId: number, userId: number): Promise<Response<MessageDto[]>>;
   editMessage(chatId: number, messageId: number, editMassages: string): Promise<Response<MessageDto>>;
-  deleteMessage(chatId: number, messageId: number): Promise<Response<PlainDto>>;
+  deleteMessage(chatId: number, messageId: number, action: string): Promise<Response<PlainDto>>;
 }
