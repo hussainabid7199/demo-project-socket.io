@@ -101,11 +101,9 @@ export class AccountController implements interfaces.Controller {
       }
 
       model.password = await BcryptUtils.hashPassword(model.password);
+      model.profilePicture = profilePicture?.path
       const { ...dbModel } = model;
-      const result = await UserModel.create({
-        ...dbModel,
-        profilePicturePath: profilePicture?.path.toString() ?? null
-      });
+      const result = await UserModel.create({...dbModel});
 
       const fullName = `${result.dataValues.firstName} ${result.dataValues.lastName}`;
       const response: CurrentUserDto = {
