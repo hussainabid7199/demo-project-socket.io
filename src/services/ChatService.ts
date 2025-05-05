@@ -434,7 +434,7 @@ export default class ChatService implements IChatService {
             cp.isDeleted = 0 and 
             c.isActive = 1 and
             c.isDeleted = 0 and
-            cp.userId != ${this.currentUserId} AND C.ID IN(SELECT DISTINCT chatId FROM chat_participants P  WHERE P.userId = ${this.currentUserId})`,
+            cp.userId != ${this.currentUserId} and c.id in(select distinct chatId from chat_participants as cp where cp.userId = ${this.currentUserId})`,
         {
           plain: false,
           raw: true,

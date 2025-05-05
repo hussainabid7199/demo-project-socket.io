@@ -14,8 +14,6 @@ export class SocketServer {
     io.on("connection", async (socket: Socket & { user?: CurrentUserDto }) => {
       try {
         const token: string = socket.handshake.auth?.token || "";
-        const roomId = socket.handshake.query?.roomId as string;
-        console.log("roomId", roomId);
 
         if (!token) {
           throw new CustomError(
@@ -47,11 +45,14 @@ export class SocketServer {
         this.mountParticipantStoppedTypingEvent(socket);
 
         socket.on(ChatEventEnum.DISCONNECT_EVENT, () => {
-          console.log("user has disconnected 🚫. user-unique-id: " + socket?.user?.guid);
+          console.log(
+            "user has disconnected 🚫. user-unique-id: " + socket?.user?.guid
+          );
           if (socket?.user?.guid) {
             socket.leave(socket.user.guid);
           }
         });
+
       } catch (error) {
         socket.emit(
           ChatEventEnum.SOCKET_ERROR_EVENT,
@@ -60,7 +61,7 @@ export class SocketServer {
       }
     });
   }
-
+  
   public emitSocketEvent(
     roomId: string,
     event: ChatEventEnum,
@@ -69,7 +70,6 @@ export class SocketServer {
     if (!this.io) {
       throw new Error("Socket server not initialized.");
     }
-    
     this.io.in(roomId).emit(event, payload);
   }
 

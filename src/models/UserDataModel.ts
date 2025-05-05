@@ -4,5 +4,5 @@ export interface UserDataModel {
   email: string;
   password: string;
   confirmPassword: string;
-  profilePicture?: File;
+  profilePicture?: string;
 }

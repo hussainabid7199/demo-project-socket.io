@@ -12,6 +12,11 @@ export enum GroupActionStatus {
   REMOVED = 'REMOVED'
 }
 
+export enum DeleteActon{
+  DELETE_FOR_ME = "FOR_ME", 
+  DELETE_FOR_EVERY_ONE = "FOR_EVERYONE",
+}
+
 export enum MessagePermission {
   ADMIN = 'ADMIN',
   USER = 'USER',
@@ -28,3 +33,4 @@ export enum GroupInviteStatus{
   ACCEPTED = "ACCEPTED", 
   DECLINED ="DECLINED"
 }
+

@@ -18,3 +18,26 @@ export interface MessageBasicDataModel {
   isActive: boolean;
   isDeleted?: boolean;
 }
+
+export interface MessageEditDataModel {
+  messageId: number;
+  oldMessage: string;
+  newMessage: string;
+  createdAt?: string;
+  createdBy: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  isActive: boolean;
+  isDeleted?: boolean;
+}
+
+export interface MessageDeleteDataModel {
+  messageId: number;
+  deletedBy: number;
+  createdAt?: string;
+  createdBy: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  isActive: boolean;
+  isDeleted?: boolean;
+}

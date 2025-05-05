@@ -18,7 +18,7 @@ MessageDeleteModel.init(
       allowNull: false,
     },
     deletedBy: {
-      type: DataTypes.STRING(255),
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     createdAt: {

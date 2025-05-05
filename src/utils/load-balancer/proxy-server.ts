@@ -22,7 +22,7 @@ export function startProxy(workerPorts: number[], proxyPort: number): void {
       `🔁 [Proxy] 🌐 Request from ${clientIp} → 🛠️ Worker port ${targetPort}`
     );
     proxy.web(req, res, { target: `http://localhost:${targetPort}` }, (err) => {
-      console.error(`Proxy error: ${err.message}`);
+      console.error(`Proxy error: ${err}`);
       res.writeHead(502);
       res.end("Bad Gateway");
     });

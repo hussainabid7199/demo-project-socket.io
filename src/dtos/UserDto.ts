@@ -4,7 +4,7 @@ export default interface UserDto {
   firstName: string;
   lastName: string;
   email: string;
-  profilePicture?: File;
+  profilePicture?: string;
   isActive: boolean;
   isDeleted?: boolean;
   token?: string;
@@ -16,7 +16,7 @@ export interface UserBasicDto {
   firstName: string;
   lastName: string;
   email: string;
-  profilePicture?: File;
+  profilePicture?: string;
   isActive: boolean;
   isDeleted?: boolean;
 }

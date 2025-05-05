@@ -6,6 +6,7 @@ export function startCluster(
   basePort: number
 ): void {
   const numCPUs = cpus().length;
+  const portMap = new Map<number, number>();
 
   if (cluster.isPrimary) {
     console.table({
@@ -15,14 +16,20 @@ export function startCluster(
 
     for (let i = 0; i < numCPUs; i++) {
       const port = basePort + i;
-      cluster.fork({ PORT: port.toString() });
+      const worker = cluster.fork({ PORT: port.toString() });
+      portMap.set(worker.id, port);
     }
 
     cluster.on("exit", (worker) => {
-      setTimeout(() => {
-        console.warn(`Worker ${worker.process.pid} died. Restarting...`);
-        cluster.fork();
-      }, 60000);
+      const port = portMap.get(worker.id);
+      portMap.delete(worker.id);
+      if (port !== undefined) {
+        setTimeout(() => {
+          console.warn(`Worker ${worker.process.pid} died. Restarting...`);
+          const newWorker = cluster.fork({ PORT: port.toString() });
+          portMap.set(newWorker.id, port);
+        }, 10000);
+      }
     });
   } else {
     workerStarter();
