@@ -33,7 +33,7 @@ export interface MessageEditDataModel {
 
 export interface MessageDeleteDataModel {
   messageId: number;
-  deletedBy: string;
+  deletedBy: number;
   createdAt?: string;
   createdBy: string;
   updatedAt?: string;

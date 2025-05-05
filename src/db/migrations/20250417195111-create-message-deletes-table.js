@@ -21,8 +21,12 @@ module.exports = {
           },
         },
         deletedBy: {
-          type: Sequelize.STRING(255),
-          allowNull: false
+          type: Sequelize.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'users',
+            key: 'id',
+          },
         },
         createdAt: {
           type: Sequelize.DATE(7),

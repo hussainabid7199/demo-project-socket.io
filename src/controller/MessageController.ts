@@ -49,21 +49,21 @@ export class MessageController implements interfaces.Controller {
     this.currentUserGuid = this.currentUser.guid;
   }
 
-  @httpGet("/:chatId/:userId", authentication)
+  @httpGet("/:chatId", authentication)
   public async messages(
     @request() req: Request,
     @response() res: Response
   ): Promise<Response<ContactDto[] | void>> {
     try {
-      const { chatId, userId } = req.params;
+      const { chatId } = req.params;
 
-      if (!+chatId || !+userId || !this.currentUserId) {
+      if (!+chatId || !this.currentUserId) {
         return res
           .status(400)
           .json({ success: false, message: "Invalid request payload" });
       }
 
-      const response = await this.messageService.message(+chatId, +userId);
+      const response = await this.messageService.message(+chatId);
 
       if (response && response.data && response.success) {
         return res.status(response.status || 200).json(response);

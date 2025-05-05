@@ -2,7 +2,7 @@ import { inject, injectable } from "inversify";
 import IUserService from "./interface/IUserService";
 import IMiscellaneousService from "./interface/IMiscellaneousService";
 import { TYPES } from "../config/types";
-import { CurrentUserDto, UserBasicDto } from "../dtos/UserDto";
+import UserDto, { CurrentUserDto, UserBasicDto } from "../dtos/UserDto";
 import { SocketServer } from "../socket";
 import IChatService from "./interface/IChatService";
 import IMessageService from "./interface/IMessageService";
@@ -21,7 +21,7 @@ import MessageModel from "../database/models/MessageModel";
 import { ChatEventEnum } from "../socket/constant";
 import { ChatType, DeleteActon } from "../enums/action.enum";
 import ChatParticipantModel from "../database/models/ChatParticipantModel";
-import { Op, Optional } from "sequelize";
+import { Op } from "sequelize";
 import ChatDto, { ChatParticipantDto } from "../dtos/ChatDto";
 import MessageEditModel from "../database/models/MessageEditModel";
 import MessageDeleteModel from "../database/models/MessageDeleteModel";
@@ -51,24 +51,8 @@ export default class MessageService implements IMessageService {
     this.currentUserId = this.currentUser.id;
   }
 
-  async message(
-    chatId: number,
-    userId: number
-  ): Promise<Response<MessageDto[]>> {
+  async message(chatId: number): Promise<Response<MessageDto[]>> {
     try {
-      const user = (await UserModel.findOne({
-        where: { id: userId },
-        raw: true,
-      })) as UserBasicDto | null;
-
-      if (!user) {
-        return {
-          success: false,
-          status: 400,
-          message: "Sender not found.",
-        };
-      }
-
       const chat = (await ChatModel.findOne({
         where: {
           id: chatId,
@@ -86,26 +70,30 @@ export default class MessageService implements IMessageService {
         };
       }
 
-      if (chat.type === ChatType.PRIVATE) {
-        const participant = (await ChatParticipantModel.findOne({
-          where: {
-            chatId: chat.id,
-            userId: {
-              [Op.in]: [this.currentUserId, user.id],
-            },
-            isActive: true,
-            isDeleted: false,
-          },
-          raw: true,
-        })) as ChatParticipantDto | null;
+      // if (chat.type === ChatType.PRIVATE) {
 
-        if (!participant) {
-          return {
-            success: false,
-            status: 400,
-            message: "Receiver not found.",
-          };
-        }
+      // }else if(chat.type === Chat.Type.GROUP){
+
+      // }
+
+      const participant = (await ChatParticipantModel.findOne({
+        where: {
+          chatId: chat.id,
+          userId: {
+            [Op.in]: [this.currentUserId],
+          },
+          isActive: true,
+          isDeleted: false,
+        },
+        raw: true,
+      })) as ChatParticipantDto | null;
+
+      if (!participant) {
+        return {
+          success: false,
+          status: 400,
+          message: "Invalid participant.",
+        };
       }
 
       const response = (await MessageModel.findAll({
@@ -280,6 +268,7 @@ export default class MessageService implements IMessageService {
         where: {
           id: messageId,
           chatId: chatId,
+          senderId: this.currentUserId,
           isActive: true,
           isDeleted: false,
         },
@@ -391,65 +380,60 @@ export default class MessageService implements IMessageService {
     action: string
   ): Promise<Response<PlainDto>> {
     try {
-      const message = await MessageModel.findOne({
-        where: {
-          id: messageId,
-          chatId: chatId,
-          isActive: true,
-          isDeleted: false,
-        },
-      });
+      const [message, chat, participants] = await Promise.all([
+        MessageModel.findOne({
+          where: {
+            id: messageId,
+            chatId: chatId,
+            isActive: true,
+            isDeleted: false,
+          },
+          raw: true,
+        }),
+        ChatModel.findOne({
+          where: {
+            id: chatId,
+            isActive: true,
+            isDeleted: false,
+          },
+          raw: true,
+        }),
+        ChatParticipantModel.findAll({
+          where: { chatId: chatId, isActive: true, isDeleted: false }, raw: true
+        }),
+      ]);
 
-      if (!message) {
+      const messageResponse = message as unknown as MessageDto;
+      const chatResponse = chat as unknown as ChatDto;
+      const participantResponse = participants as unknown as ChatParticipantDto[];
+
+      if (!messageResponse || !chatResponse || !participantResponse) {
+        const context: string = !messageResponse ? "Message" : !chatResponse ? "Chat" : !participantResponse ? "Participant" : "Data"
         return {
           success: false,
           status: 400,
-          message: "Message not found.",
+          message: `${context} not found.`,
         };
       }
 
-      const chat = (await ChatModel.findOne({
-        where: {
-          id: chatId,
-          isActive: true,
-          isDeleted: false,
-        },
-        raw: true,
-      })) as ChatDto | null;
-
-      if (!chat) {
+      const isCurrentUserParticipant = participantResponse.some((x) => x.userId === this.currentUserId);
+      if (!isCurrentUserParticipant) {
         return {
           success: false,
           status: 400,
-          message: "Chat not found.",
+          message: "Invalid participant.",
         };
       }
 
+      let isDeleteAction = false;
       let isDeleteForEveryOne = false;
-      const participants = (await ChatParticipantModel.findAll({
-        where: { chatId: chat.id, isActive: true, isDeleted: false },
-      })) as unknown as ChatParticipantDto[];
-      const isCurrentUserParticipant = participants.filter(
-        (x) => x.userId === this.currentUserId
-      );
       const updateDeletePayload: Partial<MessageDeleteDataModel> = {};
       if (action === DeleteActon.DELETE_FOR_ME) {
-        if (!isCurrentUserParticipant) {
-          return {
-            success: false,
-            status: 400,
-            message: "Invalid participant.",
-          };
-        }
-
-        updateDeletePayload.messageId = message.dataValues.id;
-        updateDeletePayload.deletedBy = this.currentUserGuid;
+        updateDeletePayload.messageId = messageResponse.id;
+        updateDeletePayload.deletedBy = this.currentUserId;
         updateDeletePayload.createdBy = this.currentUserGuid;
 
-        const deleteMessageStatus = await MessageDeleteModel.create(
-          updateDeletePayload
-        );
-
+        const deleteMessageStatus = await MessageDeleteModel.create(updateDeletePayload);
         if (!deleteMessageStatus) {
           return {
             success: false,
@@ -457,71 +441,110 @@ export default class MessageService implements IMessageService {
             message: "Some error occurred while deleting the message",
           };
         }
+        isDeleteAction = true;
       } else if (action === DeleteActon.DELETE_FOR_EVERY_ONE) {
         if (
-          message.dataValues.senderId === this.currentUserId &&
-          message.dataValues.createdBy === this.currentUserGuid &&
+          messageResponse.senderId === this.currentUserId &&
+          messageResponse.createdBy === this.currentUserGuid &&
           isCurrentUserParticipant
         ) {
-          const messageDeleteModel: MessageDeleteDataModel[] = [];
-          const messageModel: MessageDeleteDataModel[] = participants.map(
-            (x) => {
-              if (x.chatId === chat.id && x.userId === x.userId) {
-                return {
-                  messageId: message.dataValues.id | 0,
-                  createdBy: this.currentUserGuid,
-                  deletedBy: this.currentUserGuid,
-                } as MessageDeleteDataModel;
-              }
+          try {
+            const participantsStatus = await Promise.all(
+              participantResponse.map(async (x) => {
+                const currentUser = (await UserModel.findOne({
+                  where: { id: x.id, isActive: true, isDeleted: false },
+                })) as unknown as UserDto;
+
+                if (!currentUser) {
+                  return {
+                    success: false,
+                    status: 400,
+                    message: "User not found.",
+                  };
+                }
+
+                const checkDeletedMessageExist =
+                  (await MessageDeleteModel.findOne({
+                    where: {
+                      messageId: messageResponse.id,
+                      deletedBy: currentUser.id,
+                      isActive: true,
+                      isDeleted: false,
+                    },
+                    raw: true,
+                  })) as unknown as MessageDto;
+
+                if (!checkDeletedMessageExist) {
+                  if (
+                    currentUser &&
+                    currentUser.id &&
+                    x.chatId === chatResponse.id &&
+                    x.userId === x.userId
+                  ) {
+                    await MessageDeleteModel.create({
+                      messageId: messageResponse.id,
+                      createdBy: this.currentUserGuid,
+                      deletedBy: currentUser.id,
+                    });
+                  }
+                }
+              })
+            );
+
+            if (participantsStatus) {
+              isDeleteAction = true;
+              isDeleteForEveryOne = true;
             }
-          ) as unknown as MessageDeleteDataModel[];
-          messageDeleteModel.push(...messageModel);
-
-          const deleteMessageStatus = await MessageDeleteModel.bulkCreate(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            messageDeleteModel as unknown as Optional<any, string>[]
-          );
-
-          isDeleteForEveryOne = true;
-          if (!deleteMessageStatus) {
-            return {
-              success: false,
-              status: 400,
-              message: "Some error occurred while deleting the message",
-            };
+          } catch (error) {
+            return ErrorHandler.Handle(
+              error,
+              "DATABASE_ERROR",
+              400,
+              "Some error occurred while sending messages"
+            );
           }
         }
       }
 
-      const updatePayload: Partial<MessageBasicDataModel> = {};
-      updatePayload.isActive = isDeleteForEveryOne ? false : true;
-      updatePayload.isDeleted = isDeleteForEveryOne ? true : false;
+      let messageActionStatus = false;
+      let affectedCountResult;
+      let updatedRowResult;
+      if (isDeleteAction) {
+        const updatePayload: Partial<MessageBasicDataModel> = {};
+        updatePayload.isActive = isDeleteForEveryOne ? false : true;
+        updatePayload.isDeleted = isDeleteForEveryOne ? true : false;
 
-      const [affectedCount, updatedRows] = await MessageModel.update(
-        updatePayload,
-        {
-          where: {
-            id: message.dataValues.id,
-            chatId: chat.id,
-            isActive: true,
-            isDeleted: false
-          },
-          returning: true,
+        const [affectedCount, updatedRows] = await MessageModel.update(
+          updatePayload,
+          {
+            where: {
+              id: messageResponse.id,
+              chatId: chatResponse.id,
+              isActive: true,
+              isDeleted: false,
+            },
+            returning: true,
+          }
+        );
+
+        if (!affectedCount && !updatedRows) {
+          return {
+            success: false,
+            status: 400,
+            message: "Some error occurred while deleting the message",
+          };
         }
-      );
 
-      if (!affectedCount && !updatedRows) {
-        return {
-          success: false,
-          status: 400,
-          message: "Some error occurred while deleting the message",
-        };
+        affectedCountResult = affectedCount;
+        updatedRowResult = updatedRows;
+
+        messageActionStatus = true;
       }
 
       let response;
-      if (affectedCount > 0 && updatedRows) {
+      if (affectedCountResult && updatedRowResult && messageActionStatus) {
         response = {
-          count: affectedCount,
+          count: affectedCountResult,
           message: "Message deleted successfully.",
         } as PlainDto;
       } else {
@@ -531,9 +554,14 @@ export default class MessageService implements IMessageService {
         } as PlainDto;
       }
 
-      if (affectedCount > 0 && response) {
+      if (
+        affectedCountResult &&
+        updatedRowResult &&
+        messageActionStatus &&
+        response
+      ) {
         return {
-          success: false,
+          success: true,
           status: 204,
           message: "Message deleted successfully.",
           data: response,
