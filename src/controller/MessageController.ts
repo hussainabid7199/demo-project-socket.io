@@ -56,7 +56,7 @@ export class MessageController implements interfaces.Controller {
   ): Promise<Response<ContactDto[] | void>> {
     try {
       const { chatId } = req.params;
-
+      
       if (!+chatId || !this.currentUserId) {
         return res
           .status(400)
@@ -115,8 +115,16 @@ export class MessageController implements interfaces.Controller {
   ): Promise<Response<ContactDto[] | void>> {
     const t = await sequelize.transaction();
     try {
-      const { chatId, messageId, editMassages } = req.body;
-      const response = await this.messageService.editMessage(+chatId, +messageId, editMassages);
+      const {
+        chatId,
+        messageId,
+        editMassages,
+      }: { chatId: number; messageId: number; editMassages: string } = req.body;
+      const response = await this.messageService.editMessage(
+        chatId,
+        messageId,
+        editMassages
+      );
 
       if (response && response.data && response.success) {
         await t.commit();
@@ -143,8 +151,16 @@ export class MessageController implements interfaces.Controller {
   ): Promise<Response<ContactDto[] | void>> {
     const t = await sequelize.transaction();
     try {
-      const { chatId, messageId, action } = req.body;
-      const response = await this.messageService.deleteMessage(chatId, messageId, action);
+      const {
+        chatId,
+        messageId,
+        action,
+      }: { chatId: number; messageId: number; action: string } = req.body;
+      const response = await this.messageService.deleteMessage(
+        chatId,
+        messageId,
+        action
+      );
 
       if (response && response.data && response.success) {
         await t.commit();
