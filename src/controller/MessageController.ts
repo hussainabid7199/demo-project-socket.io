@@ -108,6 +108,34 @@ export class MessageController implements interfaces.Controller {
     }
   }
 
+  @httpPost("/edit", authentication)
+  public async editMessages(
+    @request() req: Request,
+    @response() res: Response
+  ): Promise<Response<ContactDto[] | void>> {
+    const t = await sequelize.transaction();
+    try {
+      const { chatId, messageId, editMassages } = req.body;
+      const response = await this.messageService.editMessage(+chatId, +messageId, editMassages);
+
+      if (response && response.data && response.success) {
+        await t.commit();
+        return res.status(response.status || 200).json(response);
+      } else {
+        await t.rollback();
+        return res.status(response.status || 400).json(response);
+      }
+    } catch (error) {
+      await t.rollback();
+      console.error("Error while deleting the messages:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+        error: "Internal server error",
+      });
+    }
+  }
+
   @httpPost("/delete", authentication)
   public async deleteMessages(
     @request() req: Request,

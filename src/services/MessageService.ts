@@ -259,47 +259,48 @@ export default class MessageService implements IMessageService {
   }
 
   async editMessage(
-    messageId: number,
     chatId: number,
+    messageId: number,
     editMassages: string
   ): Promise<Response<MessageDto>> {
     try {
-      const message = await MessageModel.findOne({
-        where: {
-          id: messageId,
-          chatId: chatId,
-          senderId: this.currentUserId,
-          isActive: true,
-          isDeleted: false,
-        },
-      });
+      const [chatResponse, messageResponse] = (await Promise.all([
+        ChatModel.findOne({
+          where: {
+            id: chatId,
+            isActive: true,
+            isDeleted: false,
+          },
+          raw: true,
+        }),
+        MessageModel.findOne({
+          where: {
+            id: messageId,
+            chatId: chatId,
+            senderId: this.currentUserId,
+            isActive: true,
+            isDeleted: false,
+          },
+          raw: true,
+        }),
+      ])) as unknown as [ChatDto, MessageDto];
 
-      const currentMessage = message as MessageDto | null;
-
-      if (!message) {
+      if (!messageResponse || !chatResponse) {
+        const context: string = !messageResponse
+          ? "Message"
+          : !chatResponse
+          ? "Chat"
+          : "Data";
         return {
           success: false,
           status: 400,
-          message: "Message not found.",
+          message: `${context} not found.`,
         };
       }
 
-      const chat = (await ChatModel.findOne({
-        where: {
-          id: chatId,
-          isActive: true,
-          isDeleted: false,
-        },
-        raw: true,
-      })) as ChatDto | null;
-
-      if (!chat) {
-        return {
-          success: false,
-          status: 400,
-          message: "Chat not found.",
-        };
-      }
+      const message: MessageDto = messageResponse;
+      const chat: ChatDto = chatResponse;
+      const currentMessage: MessageDto = message;
 
       const updatePayload: Partial<MessageDataModel> = {};
       updatePayload.chatId = chat.id;
@@ -310,8 +311,8 @@ export default class MessageService implements IMessageService {
         updatePayload,
         {
           where: {
+            id: message.id,
             chatId: chat.id,
-            messageId: message.dataValues.id,
             isActive: true,
             isDeleted: false,
           },
@@ -338,8 +339,7 @@ export default class MessageService implements IMessageService {
       }
 
       const messageUpdateStatus = await MessageEditModel.create(addPayload);
-
-      if (messageUpdateStatus) {
+      if (!messageUpdateStatus) {
         return {
           success: false,
           status: 400,
@@ -380,35 +380,43 @@ export default class MessageService implements IMessageService {
     action: string
   ): Promise<Response<PlainDto>> {
     try {
-      const [message, chat, participants] = await Promise.all([
-        MessageModel.findOne({
-          where: {
-            id: messageId,
-            chatId: chatId,
-            isActive: true,
-            isDeleted: false,
-          },
-          raw: true,
-        }),
-        ChatModel.findOne({
-          where: {
-            id: chatId,
-            isActive: true,
-            isDeleted: false,
-          },
-          raw: true,
-        }),
-        ChatParticipantModel.findAll({
-          where: { chatId: chatId, isActive: true, isDeleted: false }, raw: true
-        }),
-      ]);
+      const [messageResponse, chatResponse, participantResponse] =
+        (await Promise.all([
+          MessageModel.findOne({
+            where: {
+              id: messageId,
+              chatId: chatId,
+              isActive: true,
+              isDeleted: false,
+            },
+            raw: true,
+          }),
+          ChatModel.findOne({
+            where: {
+              id: chatId,
+              isActive: true,
+              isDeleted: false,
+            },
+            raw: true,
+          }),
+          ChatParticipantModel.findAll({
+            where: { chatId: chatId, isActive: true, isDeleted: false },
+            raw: true,
+          }),
+        ])) as unknown as [MessageDto, ChatDto, ChatParticipantDto[]];
 
-      const messageResponse = message as unknown as MessageDto;
-      const chatResponse = chat as unknown as ChatDto;
-      const participantResponse = participants as unknown as ChatParticipantDto[];
+      const message: MessageDto = messageResponse;
+      const chat: ChatDto = chatResponse;
+      const participants: ChatParticipantDto[] = participantResponse;
 
-      if (!messageResponse || !chatResponse || !participantResponse) {
-        const context: string = !messageResponse ? "Message" : !chatResponse ? "Chat" : !participantResponse ? "Participant" : "Data"
+      if (!message || !chat || !participants) {
+        const context: string = !message
+          ? "Message"
+          : !chat
+          ? "Chat"
+          : !participants
+          ? "Participant"
+          : "Data";
         return {
           success: false,
           status: 400,
@@ -416,7 +424,9 @@ export default class MessageService implements IMessageService {
         };
       }
 
-      const isCurrentUserParticipant = participantResponse.some((x) => x.userId === this.currentUserId);
+      const isCurrentUserParticipant = participants.some(
+        (x) => x.userId === this.currentUserId
+      );
       if (!isCurrentUserParticipant) {
         return {
           success: false,
@@ -429,11 +439,13 @@ export default class MessageService implements IMessageService {
       let isDeleteForEveryOne = false;
       const updateDeletePayload: Partial<MessageDeleteDataModel> = {};
       if (action === DeleteActon.DELETE_FOR_ME) {
-        updateDeletePayload.messageId = messageResponse.id;
+        updateDeletePayload.messageId = message.id;
         updateDeletePayload.deletedBy = this.currentUserId;
         updateDeletePayload.createdBy = this.currentUserGuid;
 
-        const deleteMessageStatus = await MessageDeleteModel.create(updateDeletePayload);
+        const deleteMessageStatus = await MessageDeleteModel.create(
+          updateDeletePayload
+        );
         if (!deleteMessageStatus) {
           return {
             success: false,
@@ -444,13 +456,13 @@ export default class MessageService implements IMessageService {
         isDeleteAction = true;
       } else if (action === DeleteActon.DELETE_FOR_EVERY_ONE) {
         if (
-          messageResponse.senderId === this.currentUserId &&
-          messageResponse.createdBy === this.currentUserGuid &&
+          message.senderId === this.currentUserId &&
+          message.createdBy === this.currentUserGuid &&
           isCurrentUserParticipant
         ) {
           try {
             const participantsStatus = await Promise.all(
-              participantResponse.map(async (x) => {
+              participants.map(async (x) => {
                 const currentUser = (await UserModel.findOne({
                   where: { id: x.id, isActive: true, isDeleted: false },
                 })) as unknown as UserDto;
@@ -466,7 +478,7 @@ export default class MessageService implements IMessageService {
                 const checkDeletedMessageExist =
                   (await MessageDeleteModel.findOne({
                     where: {
-                      messageId: messageResponse.id,
+                      messageId: message.id,
                       deletedBy: currentUser.id,
                       isActive: true,
                       isDeleted: false,
@@ -478,11 +490,11 @@ export default class MessageService implements IMessageService {
                   if (
                     currentUser &&
                     currentUser.id &&
-                    x.chatId === chatResponse.id &&
+                    x.chatId === chat.id &&
                     x.userId === x.userId
                   ) {
                     await MessageDeleteModel.create({
-                      messageId: messageResponse.id,
+                      messageId: message.id,
                       createdBy: this.currentUserGuid,
                       deletedBy: currentUser.id,
                     });
@@ -518,8 +530,8 @@ export default class MessageService implements IMessageService {
           updatePayload,
           {
             where: {
-              id: messageResponse.id,
-              chatId: chatResponse.id,
+              id: message.id,
+              chatId: chat.id,
               isActive: true,
               isDeleted: false,
             },
